@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="GORM — Model how things connect">
+  <rect width="1200" height="630" fill="#111018"/>
+  <g opacity=".16" stroke="#c9a7ff"><path d="M0 105h1200M0 210h1200M0 315h1200M0 420h1200M0 525h1200"/><path d="M120 0v630M240 0v630M360 0v630M480 0v630M600 0v630M720 0v630M840 0v630M960 0v630M1080 0v630"/></g>
+  <g fill="none" stroke="#585064" stroke-width="4"><path d="M755 185C860 185 860 275 958 275"/><path d="M755 185C860 185 850 390 955 390"/><path d="M958 275C1022 275 1022 390 955 390"/></g>
+  <g><circle cx="720" cy="185" r="44" fill="#18151f" stroke="#c9a7ff" stroke-width="5"/><circle cx="995" cy="275" r="42" fill="#18151f" stroke="#ff8da1" stroke-width="5"/><circle cx="995" cy="390" r="42" fill="#18151f" stroke="#9fe3d5" stroke-width="5"/></g>
+  <text x="80" y="125" fill="#c9a7ff" font-size="22" font-family="monospace" font-weight="700" letter-spacing="4">GORM · GRAPH PERSISTENCE FOR .NET</text>
+  <text x="80" y="255" fill="#f3efe7" font-size="74" font-family="Arial, sans-serif" font-weight="800">Model how things</text>
+  <text x="80" y="340" fill="#aaa5b2" font-size="74" font-family="Arial, sans-serif" font-weight="800">connect.</text>
+  <text x="80" y="435" fill="#8d8794" font-size="25" font-family="Arial, sans-serif">nodes · edges · traversal · history · graph intelligence</text>
+  <text x="80" y="535" fill="#d7cbb1" font-size="20" font-family="monospace" font-weight="700">PC · PjotrCasteel · open source</text>
+</svg>

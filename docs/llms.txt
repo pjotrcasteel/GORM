@@ -1,0 +1,24 @@
+# GORM
+
+Promise: Model how things connect.
+
+GORM is a strongly typed graph ORM for SQL Server Graph with LINQ-style traversal, relationship-aware loading, change tracking, graph mutations, in-memory execution and temporal history.
+
+Current source material also documents:
+- Graph Intelligence algorithms and projections;
+- Temporal Digital Twin simulation;
+- Explainable Hybrid GraphRAG;
+- Helix query analysis and safe optimization;
+- a graph ChangeSet and transaction compiler.
+
+Public naming note:
+The current implementation materials use the product/package name KPN.IRMA.Gorm. Canonical website: https://pjotrcasteel.github.io/GORM/
+Canonical repository: https://github.com/pjotrcasteel/GORM
+
+The public repository identity is GORM. The implementation source migration and NuGet identity are intentionally deferred until organization-specific naming is removed and the full .NET 10 suite is green.
+
+Brand collision note:
+The public capability name is "ChangeSet & transaction compiler". Source migration includes resolving an internal namespace collision with the separate Forge product family.
+
+Boundary:
+GORM owns graph persistence/query/history mechanics. Analysis and preview APIs remain read-only until the application explicitly saves or applies mutations. Business policy remains application-owned.

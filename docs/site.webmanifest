@@ -1,0 +1,10 @@
+{
+  "name": "GORM",
+  "short_name": "GORM",
+  "description": "Strongly typed graph persistence for .NET.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#111018",
+  "theme_color": "#111018",
+  "icons": [{"src":"./logo.svg","sizes":"any","type":"image/svg+xml"}]
+}
