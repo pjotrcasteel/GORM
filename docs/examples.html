@@ -23,7 +23,7 @@
 <main class="docs-content">
 <section class="docs-hero"><div class="eyebrow">RUNNABLE EXAMPLES</div><h1>Start from code that already answers a graph question.</h1><p>Each example opens directly in the GORM playground. Change the query, inspect the graph anatomy and compare the resulting SQL Server Graph shape.</p><div class="docs-actions"><a class="button" href="./playground.html#outgoing">Run first example</a><a class="button ghost" href="./querying.html">Read querying docs</a></div></section>
 
-<section class="doc-section"><div class="doc-kicker">TRAVERSAL</div><h2>Connected-data queries</h2><div class="example-gallery">
+<section class="doc-section" id="traversal-examples"><div class="doc-kicker">TRAVERSAL</div><h2>Connected-data queries</h2><div class="example-gallery">
   <a class="example-card" href="./playground.html#outgoing"><span>ONE HOP · OUTGOING</span><h3>Find a person's projects</h3><pre><code>context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
     .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre><b>Run example →</b></a>
@@ -36,7 +36,7 @@
     .Outgoing&lt;DependsOnEdge, DatabaseNode&gt;()</code></pre><b>Run example →</b></a>
 </div></section>
 
-<section class="doc-section"><div class="doc-kicker">LINQ</div><h2>Filtering and result shaping</h2><div class="example-gallery">
+<section class="doc-section" id="linq-examples"><div class="doc-kicker">LINQ</div><h2>Filtering and result shaping</h2><div class="example-gallery">
   <a class="example-card" href="./playground.html#filter"><span>FILTER + PAGE</span><h3>Page active services</h3><pre><code>context.Set&lt;ServiceNode&gt;()
     .Where(x =&gt; x.State == ServiceState.Active)
     .OrderBy(x =&gt; x.Name)
@@ -50,11 +50,11 @@
     .SingleAsync(x =&gt; x.Id == personId)</code></pre><b>Run example →</b></a>
 </div></section>
 
-<section class="doc-section"><div class="doc-kicker">EXPERIMENT</div><h2>Turn any supported example into your own permalink</h2><p>The playground can now preserve the complete editor query in the URL. Start with a preset, modify it, press <strong>Share query</strong>, and the copied link reopens the exact query instead of only the original preset.</p><div class="callout"><strong>Useful for docs and issues</strong><span>A query permalink can be pasted into a bug report, PR discussion or documentation page without copying the SQL output separately.</span><a href="./playground.html">Open playground →</a></div></section>
+<section class="doc-section" id="permalinks"><div class="doc-kicker">EXPERIMENT</div><h2>Turn any supported example into your own permalink</h2><p>The playground can now preserve the complete editor query in the URL. Start with a preset, modify it, press <strong>Share query</strong>, and the copied link reopens the exact query instead of only the original preset.</p><div class="callout"><strong>Useful for docs and issues</strong><span>A query permalink can be pasted into a bug report, PR discussion or documentation page without copying the SQL output separately.</span><a href="./playground.html">Open playground →</a></div></section>
 
 <nav class="doc-page-nav"><a href="./guides.html"><span>← PREVIOUS</span><strong>Guides &amp; cookbook</strong></a><a href="./playground.html"><span>NEXT →</span><strong>Interactive playground</strong></a></nav>
 </main>
-<aside class="toc"><span>ON THIS PAGE</span><a href="#">Traversal examples</a><a href="#">LINQ examples</a><a href="#">Permalinks</a></aside>
+<aside class="toc"><span>ON THIS PAGE</span><a href="#traversal-examples">Traversal examples</a><a href="#linq-examples">LINQ examples</a><a href="#permalinks">Permalinks</a></aside>
 </div>
-<script src="./script.js"></script>
+<script src="./script.js"></script><script src="./docs-polish.js"></script>
 </body></html>
