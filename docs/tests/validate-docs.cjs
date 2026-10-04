@@ -57,23 +57,50 @@ function validateLinks() {
 
 function validatePlaygroundArchitecture() {
     const html = fs.readFileSync(path.join(docsRoot, 'playground.html'), 'utf8');
-    const requiredScripts = ['playground-preview-engine.js', 'playground-adapter.js', 'playground-contracts.js', 'playground-shell.js', 'playground-runtime.js'];
+    const requiredScripts = ['playground-preview-engine.js', 'playground-adapter.js', 'playground-examples.js', 'playground-contracts.js', 'playground-shell.js', 'playground-runtime.js'];
     for (const script of requiredScripts) {
         const matches = html.match(new RegExp(`<script\\s+src=["']\\./${script.replace('.', '\\.')}["']`, 'g')) ?? [];
         if (matches.length !== 1) fail(`playground.html: expected exactly one ${script} script reference, found ${matches.length}`);
     }
     if (/<script\s+src=["']\.\/script\.js["']/.test(html)) fail('playground.html: general script.js must not own playground behavior');
 
+    const examplesIndex = html.indexOf('./playground-examples.js');
+    const contractsIndex = html.indexOf('./playground-contracts.js');
     const shellIndex = html.indexOf('./playground-shell.js');
     const runtimeIndex = html.indexOf('./playground-runtime.js');
-    if (shellIndex < 0 || runtimeIndex < 0 || shellIndex > runtimeIndex) fail('playground.html: playground shell must load before playground runtime');
+    if (examplesIndex < 0 || contractsIndex < examplesIndex || shellIndex < contractsIndex || runtimeIndex < shellIndex) fail('playground.html: examples, contracts, shell and runtime must load in dependency order');
     console.log('Checked single playground execution pipeline.');
+}
+
+function validateExampleCatalog() {
+    global.window = global;
+    require(path.join(docsRoot, 'playground-examples.js'));
+    const examples = global.GormPlaygroundExamples ?? [];
+    if (!examples.length) {
+        fail('playground example catalog is empty');
+        return;
+    }
+
+    const keys = examples.map(example => example.key);
+    const ids = examples.map(example => example.id);
+    if (new Set(keys).size !== keys.length) fail('playground example keys must be unique');
+    if (new Set(ids).size !== ids.length) fail('playground contract ids must be unique');
+    for (const example of examples) {
+        if (!example.key || !example.id || !example.label || !example.query || !example.expect) fail(`playground example '${example.key ?? example.id ?? 'unknown'}' is incomplete`);
+    }
+
+    const html = fs.readFileSync(path.join(docsRoot, 'playground.html'), 'utf8');
+    const presetKeys = [...html.matchAll(/data-example=["']([^"']+)["']/g)].map(match => match[1]);
+    for (const key of keys) if (!presetKeys.includes(key)) fail(`playground example '${key}' has no preset button`);
+    for (const key of presetKeys) if (!keys.includes(key)) fail(`playground preset '${key}' has no catalog entry`);
+    console.log(`Checked ${examples.length} canonical playground examples.`);
 }
 
 async function validatePlaygroundContracts() {
     global.window = global;
     require(path.join(docsRoot, 'playground-preview-engine.js'));
     require(path.join(docsRoot, 'playground-adapter.js'));
+    if (!global.GormPlaygroundExamples) require(path.join(docsRoot, 'playground-examples.js'));
     require(path.join(docsRoot, 'playground-contracts.js'));
 
     const adapter = global.GormPlaygroundAdapter;
@@ -105,6 +132,7 @@ async function validatePlaygroundContracts() {
     validateJavaScript();
     validateLinks();
     validatePlaygroundArchitecture();
+    validateExampleCatalog();
     await validatePlaygroundContracts();
     if (failures.length) {
         console.error(`\nDocumentation validation failed with ${failures.length} issue(s).`);
