@@ -16,6 +16,7 @@ Canonical repository: https://github.com/pjotrcasteel/GORM
 - Runnable examples: https://pjotrcasteel.github.io/GORM/examples.html
 - Advanced graph capabilities: https://pjotrcasteel.github.io/GORM/advanced.html
 - API reference: https://pjotrcasteel.github.io/GORM/reference.html
+- Interactive graph model explorer: https://pjotrcasteel.github.io/GORM/graph-explorer.html
 - Interactive LINQ to SQL playground: https://pjotrcasteel.github.io/GORM/playground.html
 
 ## Core model
@@ -35,6 +36,8 @@ Key documented query operations include:
 ## Runnable documentation
 
 GORM query code blocks in the documentation can open directly in the playground. The runnable examples catalog provides focused traversal, paging, temporal and relationship-loading scenarios.
+
+The Graph Model Explorer is a visual learning tool for graph topology and traversal direction. A user chooses a root node and follows typed edges; the explorer emits the equivalent Outgoing<TEdge,TTarget>() or Incoming<TEdge,TSource>() chain and a matching SQL Server Graph shape. Generated explorer queries can open directly in the playground for further editing and translation inspection.
 
 The playground supports shareable custom-query permalinks. A permalink preserves the editor query so it can be used in documentation, issue reports and pull request discussions. It does not imply that the generated SQL is authoritative runtime output while the real translator is still pending source migration.
 
