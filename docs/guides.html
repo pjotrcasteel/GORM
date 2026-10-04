@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GORM Guides — Practical graph persistence recipes</title><meta name="description" content="Practical GORM recipes for traversal, historical inspection, impact analysis, testing and graph write planning."><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css"></head>
+<body class="docs-body"><header class="topbar"><div class="topbar-inner wrap-wide"><a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a><div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"><div id="global-search-results" class="global-search-results" hidden></div></div><nav class="top-links"><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav></div></header>
+<div class="docs-shell wrap-wide"><aside class="docs-nav"><div class="nav-group"><span>GET STARTED</span><a href="./docs.html">Overview</a><a href="./docs.html#get-started">Quickstart</a></div><div class="nav-group"><span>CORE CONCEPTS</span><a href="./concepts.html">Graph model</a></div><div class="nav-group"><span>DEVELOP</span><a href="./querying.html">Querying</a><a class="active" href="./guides.html">Guides &amp; cookbook</a><a href="./reference.html">API reference</a></div></aside>
+<main class="docs-content"><section class="docs-hero"><div class="eyebrow">GUIDES &amp; COOKBOOK</div><h1>Start from the problem you need to solve.</h1><p>These recipes combine the core GORM model and query operators into common graph-persistence tasks.</p></section>
+<section class="doc-section" id="dependencies"><div class="doc-kicker">RECIPE</div><h2>Find direct dependencies of a service</h2><pre><code>var dependencies = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == serviceId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>Use outgoing traversal when the current service is the source of a dependency relation.</p><a class="inline-card" href="./playground.html#outgoing"><span>TRY IT</span><strong>Open in playground</strong><p>Inspect the SQL Server Graph MATCH shape for this traversal.</p></a></section>
+<section class="doc-section" id="dependents"><div class="doc-kicker">RECIPE</div><h2>Find everything that depends on a node</h2><pre><code>var dependents = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == databaseId)
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>This is useful for blast-radius and impact questions where the selected node is the target of dependency edges.</p></section>
+<section class="doc-section" id="historical-topology"><div class="doc-kicker">RECIPE</div><h2>Reconstruct topology at incident time</h2><pre><code>var historicalDependencies = await context.Set&lt;ServiceNode&gt;()
+    .AsOf(incidentStartedAt)
+    .Where(x =&gt; x.Id == serviceId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>Use this pattern when current topology has already changed and you need to understand what was connected when an incident began.</p><div class="warning"><strong>Consistency matters</strong><p>The meaningful result is a historical graph, not a current edge set joined to historical node rows.</p></div></section>
+<section class="doc-section" id="load-object-graph"><div class="doc-kicker">RECIPE</div><h2>Load a domain object with related graph data</h2><pre><code>var person = await context.Set&lt;PersonNode&gt;()
+    .Include(x =&gt; x.Projects)
+    .SingleAsync(x =&gt; x.Id == personId);</code></pre><p>Prefer relationship loading when application code needs the connected object graph rather than a traversal result.</p></section>
+<section class="doc-section" id="bounded-query"><div class="doc-kicker">RECIPE</div><h2>Keep operational queries bounded</h2><pre><code>var active = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.State == ServiceState.Active)
+    .OrderBy(x =&gt; x.Name)
+    .Take(100)
+    .ToListAsync();</code></pre><p>Bounded reads reduce accidental fan-out and make interactive tooling more predictable. Combine them with deterministic ordering.</p></section>
+<section class="doc-section" id="testing"><div class="doc-kicker">RECIPE</div><h2>Test graph behavior without SQL in every test</h2><div class="compare-grid"><div><span>FAST TEST</span><pre><code>var context = CreateInMemoryGraphContext();
+
+SeedGraph(context);
+
+var result = await sut.FindDependencies(id);
+
+Assert.AreEqual(2, result.Count);</code></pre></div><div><span>PROVIDER TEST</span><pre><code>await using var database = await SqlGraphFixture.StartAsync();
+var context = database.CreateContext();
+
+// Validate SQL-specific translation,
+// temporal and concurrency behavior.</code></pre></div></div><p>Use the in-memory provider for domain/query behavior and a smaller provider suite for SQL Server-specific semantics.</p></section>
+<section class="doc-section" id="impact"><div class="doc-kicker">RECIPE</div><h2>Analyze impact without mutating the graph</h2><pre><code>var projection = await graph.ProjectAsync();
+var impact = projection.ImpactFrom(serviceId);
+
+foreach (var path in impact.Paths)
+{
+    // explain why each node is affected
+}</code></pre><p>Graph Intelligence should consume ordinary GORM graph state and remain read-only until application code explicitly chooses a mutation.</p></section>
+<section class="doc-section" id="write-plan"><div class="doc-kicker">RECIPE</div><h2>Preview a graph mutation before applying it</h2><pre><code>var plan = context.ChangeSet.Preview();
+
+foreach (var operation in plan.Operations)
+{
+    Console.WriteLine(operation);
+}
+
+await context.SaveChangesAsync();</code></pre><p>The ChangeSet compiler is intended to make ordered graph writes, rollback semantics and conflicts explainable before persistence.</p></section>
+<section class="doc-section" id="choose-api"><div class="doc-kicker">CHOOSING AN API</div><h2>Traversal, Include, analysis or mutation?</h2><div class="api-table"><div><code>Outgoing / Incoming</code><span>You are asking which nodes are connected through a specific path.</span></div><div><code>Include / ThenInclude</code><span>You want a connected object graph materialized.</span></div><div><code>Graph Intelligence</code><span>You want derived insight such as impact, centrality or routing.</span></div><div><code>ChangeSet</code><span>You want to inspect or execute graph persistence work.</span></div></div></section>
+<nav class="doc-page-nav"><a href="./querying.html"><span>← PREVIOUS</span><strong>Querying GORM</strong></a><a href="./reference.html"><span>NEXT →</span><strong>API reference</strong></a></nav></main>
+<aside class="toc"><span>ON THIS PAGE</span><a href="#dependencies">Dependencies</a><a href="#dependents">Dependents</a><a href="#historical-topology">Historical topology</a><a href="#testing">Testing</a><a href="#impact">Impact analysis</a><a href="#write-plan">Write planning</a></aside></div><script src="./script.js"></script></body></html>
