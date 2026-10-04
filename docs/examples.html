@@ -24,30 +24,30 @@
 <section class="docs-hero"><div class="eyebrow">RUNNABLE EXAMPLES</div><h1>Start from code that already answers a graph question.</h1><p>Each example opens directly in the GORM playground. Change the query, inspect the graph anatomy and compare the resulting SQL Server Graph shape.</p><div class="docs-actions"><a class="button" href="./playground.html#outgoing">Run first example</a><a class="button ghost" href="./querying.html">Read querying docs</a></div></section>
 
 <section class="doc-section" id="traversal-examples"><div class="doc-kicker">TRAVERSAL</div><h2>Connected-data queries</h2><div class="example-gallery">
-  <a class="example-card" href="./playground.html#outgoing"><span>ONE HOP · OUTGOING</span><h3>Find a person's projects</h3><pre><code>context.Set&lt;PersonNode&gt;()
+  <article class="example-card"><span>ONE HOP · OUTGOING</span><h3>Find a person's projects</h3><pre><code>context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
-    .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre><b>Run example →</b></a>
-  <a class="example-card" href="./playground.html#incoming"><span>ONE HOP · INCOMING</span><h3>Find database dependents</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre><a href="./playground.html#outgoing"><b>Run example →</b></a></article>
+  <article class="example-card"><span>ONE HOP · INCOMING</span><h3>Find database dependents</h3><pre><code>context.Set&lt;ServiceNode&gt;()
     .Where(x =&gt; x.Id == databaseId)
-    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()</code></pre><b>Run example →</b></a>
-  <a class="example-card" href="./playground.html#chained"><span>TWO HOPS</span><h3>Follow a routed dependency</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()</code></pre><a href="./playground.html#incoming"><b>Run example →</b></a></article>
+  <article class="example-card"><span>TWO HOPS</span><h3>Follow a routed dependency</h3><pre><code>context.Set&lt;ServiceNode&gt;()
     .Where(x =&gt; x.Id == gatewayId)
     .Outgoing&lt;RoutesToEdge, ServiceNode&gt;()
-    .Outgoing&lt;DependsOnEdge, DatabaseNode&gt;()</code></pre><b>Run example →</b></a>
+    .Outgoing&lt;DependsOnEdge, DatabaseNode&gt;()</code></pre><a href="./playground.html#chained"><b>Run example →</b></a></article>
 </div></section>
 
 <section class="doc-section" id="linq-examples"><div class="doc-kicker">LINQ</div><h2>Filtering and result shaping</h2><div class="example-gallery">
-  <a class="example-card" href="./playground.html#filter"><span>FILTER + PAGE</span><h3>Page active services</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+  <article class="example-card"><span>FILTER + PAGE</span><h3>Page active services</h3><pre><code>context.Set&lt;ServiceNode&gt;()
     .Where(x =&gt; x.State == ServiceState.Active)
     .OrderBy(x =&gt; x.Name)
     .Skip(20)
-    .Take(25)</code></pre><b>Run example →</b></a>
-  <a class="example-card" href="./playground.html#temporal"><span>TEMPORAL</span><h3>Inspect an incident snapshot</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Take(25)</code></pre><a href="./playground.html#filter"><b>Run example →</b></a></article>
+  <article class="example-card"><span>TEMPORAL</span><h3>Inspect an incident snapshot</h3><pre><code>context.Set&lt;ServiceNode&gt;()
     .AsOf(incidentStartedAt)
-    .Where(x =&gt; x.Name == serviceName)</code></pre><b>Run example →</b></a>
-  <a class="example-card" href="./playground.html#include"><span>RELATED DATA</span><h3>Materialize a relationship</h3><pre><code>context.Set&lt;PersonNode&gt;()
+    .Where(x =&gt; x.Name == serviceName)</code></pre><a href="./playground.html#temporal"><b>Run example →</b></a></article>
+  <article class="example-card"><span>RELATED DATA</span><h3>Materialize a relationship</h3><pre><code>context.Set&lt;PersonNode&gt;()
     .Include(x =&gt; x.Projects)
-    .SingleAsync(x =&gt; x.Id == personId)</code></pre><b>Run example →</b></a>
+    .SingleAsync(x =&gt; x.Id == personId)</code></pre><a href="./playground.html#include"><b>Run example →</b></a></article>
 </div></section>
 
 <section class="doc-section" id="permalinks"><div class="doc-kicker">EXPERIMENT</div><h2>Turn any supported example into your own permalink</h2><p>The playground can now preserve the complete editor query in the URL. Start with a preset, modify it, press <strong>Share query</strong>, and the copied link reopens the exact query instead of only the original preset.</p><div class="callout"><strong>Useful for docs and issues</strong><span>A query permalink can be pasted into a bug report, PR discussion or documentation page without copying the SQL output separately.</span><a href="./playground.html">Open playground →</a></div></section>
