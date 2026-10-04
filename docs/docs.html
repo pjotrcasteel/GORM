@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GORM Docs — Graph persistence for .NET</title>
-  <meta name="description" content="Learn GORM from first graph to traversal, temporal queries, testing, advanced graph capabilities and API reference.">
+  <meta name="description" content="Learn GORM from first graph to traversal, temporal queries, runnable examples, advanced graph capabilities and API reference.">
   <link rel="icon" href="./logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -12,13 +12,13 @@
 <header class="topbar"><div class="topbar-inner wrap-wide">
   <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a>
   <div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"><div id="global-search-results" class="global-search-results" hidden></div></div>
-  <nav class="top-links"><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+  <nav class="top-links"><a href="./examples.html">Examples</a><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
 </div></header>
 
 <div class="docs-shell wrap-wide">
 <aside class="docs-nav" aria-label="Documentation navigation">
   <div class="nav-group"><span>GET STARTED</span><a class="active" href="./docs.html">Overview</a><a href="#get-started">Quickstart</a><a href="#installation">Installation status</a></div>
-  <div class="nav-group"><span>LEARN</span><a href="./concepts.html">Core concepts</a><a href="./querying.html">Querying</a><a href="./guides.html">Guides &amp; cookbook</a></div>
+  <div class="nav-group"><span>LEARN</span><a href="./concepts.html">Core concepts</a><a href="./querying.html">Querying</a><a href="./guides.html">Guides &amp; cookbook</a><a href="./examples.html">Runnable examples</a></div>
   <div class="nav-group"><span>DEEPER GRAPH</span><a href="./advanced.html">Advanced capabilities</a></div>
   <div class="nav-group"><span>REFERENCE</span><a href="./reference.html">API reference</a><a href="./playground.html">LINQ → SQL playground</a></div>
 </aside>
@@ -28,7 +28,7 @@
     <div class="eyebrow">GORM DOCUMENTATION</div>
     <h1>Build graph-shaped applications without hiding the graph.</h1>
     <p>GORM is a strongly typed graph ORM for .NET and SQL Server Graph. Start with ordinary CLR types, express relationship direction explicitly, inspect generated SQL and use the same graph model for temporal inspection and fast tests.</p>
-    <div class="docs-actions"><a class="button" href="#get-started">Start quickstart</a><a class="button ghost" href="./playground.html">Try LINQ → SQL</a></div>
+    <div class="docs-actions"><a class="button" href="#get-started">Start quickstart</a><a class="button ghost" href="./examples.html">Browse runnable examples</a></div>
   </section>
 
   <section class="doc-section docs-catalog" id="learn">
@@ -37,9 +37,10 @@
       <a class="docs-category" href="./concepts.html"><span>CONCEPTS</span><h3>Understand the graph model</h3><p>Nodes, edges, direction, identity, navigations, topology change tracking and provider boundaries.</p><b>Learn the model →</b></a>
       <a class="docs-category" href="./querying.html"><span>QUERYING</span><h3>Query connected data</h3><p>LINQ roots, predicates, outgoing/incoming traversal, chained paths, Include, paging and temporal queries.</p><b>Explore queries →</b></a>
       <a class="docs-category" href="./guides.html"><span>GUIDES</span><h3>Solve practical graph problems</h3><p>Dependencies, dependents, historical topology, testing and graph-oriented application recipes.</p><b>Browse recipes →</b></a>
+      <a class="docs-category" href="./examples.html"><span>EXAMPLES</span><h3>Run code, then change it</h3><p>Open focused traversal, paging, temporal and relationship-loading examples directly in the playground.</p><b>Run examples →</b></a>
       <a class="docs-category" href="./advanced.html"><span>ADVANCED</span><h3>Go beyond persistence</h3><p>Graph Intelligence, Digital Twin, GraphRAG, Helix and ChangeSet — with publication status kept explicit.</p><b>Explore capabilities →</b></a>
       <a class="docs-category" href="./reference.html"><span>REFERENCE</span><h3>Look up the API shape</h3><p>Core types, GraphSet, traversal operators, temporal operations, execution and provider behavior.</p><b>Open reference →</b></a>
-      <a class="docs-category" href="./playground.html"><span>PLAYGROUND</span><h3>Inspect query anatomy</h3><p>Edit GORM LINQ and see root nodes, predicates, edge direction, graph hops and SQL Server Graph shape.</p><b>Open playground →</b></a>
+      <a class="docs-category" href="./playground.html"><span>PLAYGROUND</span><h3>Inspect query anatomy</h3><p>Edit GORM LINQ and see root nodes, parameters, translation stages, graph hops and SQL Server Graph shape.</p><b>Open playground →</b></a>
     </div>
   </section>
 
@@ -64,7 +65,7 @@ public sealed class ProjectNode : Node
     .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()
     .ToListAsync();</code></pre></div></article>
     </div>
-    <div class="callout"><strong>What happens underneath?</strong><span>Open the playground to inspect the query pipeline and SQL Server Graph shape.</span><a href="./playground.html">Open playground →</a></div>
+    <div class="callout"><strong>Run this exact query</strong><span>GORM query code blocks now link directly to the playground with their source preserved.</span><a href="./examples.html">Browse more examples →</a></div>
   </section>
 
   <section class="doc-section" id="mental-model">
@@ -92,9 +93,10 @@ dotnet add package GORM</code></pre>
     <div class="learning-paths">
       <a href="./concepts.html"><small>FOUNDATION</small><strong>1. Graph model</strong><span>Nodes → edges → direction → tracking</span></a>
       <a href="./querying.html"><small>DEVELOP</small><strong>2. Querying</strong><span>LINQ → traversal → SQL → temporal</span></a>
-      <a href="./guides.html"><small>APPLY</small><strong>3. Cookbook</strong><span>Dependencies → incidents → testing</span></a>
-      <a href="./advanced.html"><small>GO DEEPER</small><strong>4. Advanced graph</strong><span>Intelligence → simulation → Helix → ChangeSet</span></a>
-      <a href="./reference.html"><small>LOOK UP</small><strong>5. Reference</strong><span>Types → methods → providers → status</span></a>
+      <a href="./examples.html"><small>EXPERIMENT</small><strong>3. Runnable examples</strong><span>Open → inspect → modify → share</span></a>
+      <a href="./guides.html"><small>APPLY</small><strong>4. Cookbook</strong><span>Dependencies → incidents → testing</span></a>
+      <a href="./advanced.html"><small>GO DEEPER</small><strong>5. Advanced graph</strong><span>Intelligence → simulation → Helix → ChangeSet</span></a>
+      <a href="./reference.html"><small>LOOK UP</small><strong>6. Reference</strong><span>Types → methods → providers → status</span></a>
     </div>
   </section>
 
