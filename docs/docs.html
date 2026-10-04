@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Docs — Learn graph persistence for .NET</title>
+  <meta name="description" content="Learn GORM from first graph to traversal, temporal queries, testing and advanced graph capabilities.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="docs-body">
+  <header class="topbar">
+    <div class="topbar-inner wrap-wide">
+      <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a>
+      <div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"></div>
+      <nav class="top-links"><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+    </div>
+  </header>
+
+  <div class="docs-shell wrap-wide">
+    <aside class="docs-nav" aria-label="Documentation navigation">
+      <div class="nav-group"><span>GET STARTED</span><a href="#overview">Overview</a><a href="#get-started">Quickstart</a><a href="#install">Installation</a><a href="#first-model">Your first model</a></div>
+      <div class="nav-group"><span>CORE CONCEPTS</span><a href="#concepts">Nodes &amp; edges</a><a href="#identity">Identity &amp; mapping</a><a href="#relationships">Relationships</a><a href="#change-tracking">Change tracking</a></div>
+      <div class="nav-group"><span>QUERYING</span><a href="#querying">LINQ basics</a><a href="#traversal">Traversal</a><a href="#include">Include &amp; ThenInclude</a><a href="#sql">Generated SQL</a></div>
+      <div class="nav-group"><span>GRAPH FEATURES</span><a href="#temporal">Temporal graph</a><a href="#testing">In-memory testing</a><a href="#analysis">Graph intelligence</a><a href="#changesets">ChangeSet compiler</a></div>
+      <div class="nav-group"><span>REFERENCE</span><a href="#api-shape">API shape</a><a href="#providers">Providers</a><a href="#boundary">Design boundary</a><a href="#status">Repository status</a></div>
+    </aside>
+
+    <main class="docs-content">
+      <section class="docs-hero" id="overview" data-search="overview graph orm sql server dotnet getting started">
+        <div class="eyebrow">GORM DOCUMENTATION</div>
+        <h1>Graph persistence that feels like .NET.</h1>
+        <p>GORM is a strongly typed graph ORM for SQL Server Graph. It keeps nodes and edges explicit, lets queries express relationship intent directly and gives the same model a fast in-memory execution path for tests.</p>
+        <div class="docs-actions"><a class="button" href="#get-started">Start the quickstart</a><a class="button ghost" href="./playground.html">Try the playground</a></div>
+      </section>
+
+      <section class="doc-section" id="get-started" data-search="quickstart first graph person project works on context set outgoing">
+        <div class="doc-kicker">GET STARTED</div><h2>Build your first graph</h2>
+        <p>Start with two node types and one relationship. GORM keeps the model ordinary: your domain entities remain CLR types while the persistence layer understands which types are nodes and which are edges.</p>
+        <div class="step-list">
+          <article><b>1</b><div><h3>Define nodes</h3><p>A node is an entity that participates in graph relationships.</p><pre><code>public sealed class PersonNode : Node
+{
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class ProjectNode : Node
+{
+    public string Name { get; set; } = string.Empty;
+}</code></pre></div></article>
+          <article><b>2</b><div><h3>Define an edge</h3><p>An edge can carry data of its own.</p><pre><code>public sealed class WorksOnEdge : Edge
+{
+    public bool IsPrimary { get; set; }
+}</code></pre></div></article>
+          <article><b>3</b><div><h3>Traverse the relationship</h3><p>Relationship direction becomes part of the query instead of being reconstructed from manual joins.</p><pre><code>var projects = await context.Set&lt;PersonNode&gt;()
+    .Where(x =&gt; x.Id == personId)
+    .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()
+    .ToListAsync();</code></pre></div></article>
+        </div>
+        <div class="callout"><strong>Want to see the SQL?</strong><span>Open the playground and change the query interactively.</span><a href="./playground.html">Open playground →</a></div>
+      </section>
+
+      <section class="doc-section" id="install" data-search="install nuget package source migration dotnet add package">
+        <div class="doc-kicker">INSTALLATION</div><h2>Installation status</h2>
+        <p>The public GORM repository currently establishes the product and documentation surface first. The implementation source and NuGet publication follow after source migration and validation.</p>
+        <pre><code>// Intended package shape after publication
+dotnet add package GORM</code></pre>
+        <div class="warning"><strong>Preview status</strong><p>Do not treat the package command above as a published package promise yet. The repository explicitly keeps source migration and package publication as separate steps.</p></div>
+      </section>
+
+      <section class="doc-section" id="first-model" data-search="model context graphset dbset node edge navigation property configuration">
+        <div class="doc-kicker">YOUR FIRST MODEL</div><h2>Keep domain types normal</h2>
+        <p>Node and edge classes stay focused on domain data. Public scalar properties are conventionally mapped; navigation properties represent relationships instead of ordinary scalar columns.</p>
+        <div class="compare-grid"><div><span>NODE</span><pre><code>public sealed class ServiceNode : Node
+{
+    public string Name { get; set; } = "";
+    public ServiceState State { get; set; }
+}</code></pre></div><div><span>EDGE</span><pre><code>public sealed class DependsOnEdge : Edge
+{
+    public string Kind { get; set; } = "runtime";
+}</code></pre></div></div>
+      </section>
+
+      <section class="doc-section" id="concepts" data-search="concepts node edge graph relationship topology typed graph">
+        <div class="doc-kicker">CORE CONCEPTS</div><h2>Nodes and edges are first-class persistence concepts</h2>
+        <p>Traditional ORMs usually make relationships feel secondary to tables. GORM treats the relationship itself as data: it has a type, direction, identity and optionally its own properties.</p>
+        <div class="concept-grid"><article><span>NODE</span><h3>Things</h3><p>People, services, projects, devices or any other domain entity that participates in the graph.</p></article><article><span>EDGE</span><h3>Connections</h3><p>Works on, depends on, owns, routes to or any other typed relationship between nodes.</p></article><article><span>TRAVERSAL</span><h3>Intent</h3><p>Queries can ask for connected nodes directly rather than hiding the graph path behind join mechanics.</p></article></div>
+      </section>
+
+      <section class="doc-section" id="identity" data-search="identity id key mapping scalar properties conventions">
+        <div class="doc-kicker">IDENTITY &amp; MAPPING</div><h2>Identity follows a simple default</h2><p><code>Id</code> is the default key for nodes and edges. Public scalar properties are conventionally mapped while relationship navigation stays graph-aware.</p>
+      </section>
+
+      <section class="doc-section" id="relationships" data-search="relationship outgoing incoming direction connect disconnect navigation">
+        <div class="doc-kicker">RELATIONSHIPS</div><h2>Direction is explicit</h2><p>Outgoing and incoming traversal let query code say which way it moves through the graph. Connect and disconnect operations are tracked alongside ordinary entity changes.</p>
+      </section>
+
+      <section class="doc-section" id="change-tracking" data-search="change tracking save changes connect disconnect mutations">
+        <div class="doc-kicker">CHANGE TRACKING</div><h2>Track topology changes with entity changes</h2><p>Graph mutations are part of the same persistence model. A save can reason about node changes, edge changes, connections and disconnections as explicit work.</p>
+      </section>
+
+      <section class="doc-section" id="querying" data-search="querying linq where select paging aggregate predicates contains in">
+        <div class="doc-kicker">QUERYING</div><h2>Start with familiar LINQ</h2>
+        <p>Node-root queries remain LINQ-shaped. Filters, projections, paging and aggregates stay familiar, then graph-specific operators add relationship intent where required.</p>
+        <pre><code>var active = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.State == ServiceState.Active)
+    .OrderBy(x =&gt; x.Name)
+    .Take(25)
+    .ToListAsync();</code></pre>
+      </section>
+
+      <section class="doc-section" id="traversal" data-search="outgoing incoming traversal chained edge target source sql match">
+        <div class="doc-kicker">TRAVERSAL</div><h2>Query the relationship directly</h2>
+        <p>Traversal is where GORM differs most visibly from a conventional ORM. The graph path becomes part of the query shape.</p>
+        <div class="compare-grid"><div><span>OUTGOING</span><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == serviceId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()</code></pre></div><div><span>INCOMING</span><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == serviceId)
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()</code></pre></div></div>
+      </section>
+
+      <section class="doc-section" id="include" data-search="include theninclude eager load relationship object graph navigation">
+        <div class="doc-kicker">RELATED DATA</div><h2>Use Include when the object graph matters</h2><p>Traversal is ideal when the path is the question. <code>Include</code> and <code>ThenInclude</code> are useful when you want the connected object graph materialized for application code.</p>
+        <pre><code>var person = await context.Set&lt;PersonNode&gt;()
+    .Include(x =&gt; x.Projects)
+    .SingleAsync(x =&gt; x.Id == personId);</code></pre>
+      </section>
+
+      <section class="doc-section" id="sql" data-search="generated sql inspect translation sql server graph match helix playground">
+        <div class="doc-kicker">GENERATED SQL</div><h2>Make translation inspectable</h2><p>A graph ORM should not make its SQL mysterious. The documentation playground makes the LINQ-to-SQL shape visible, and Helix is intended to expose query analysis and SQL inspection as a first-class capability.</p>
+        <a class="inline-card" href="./playground.html"><span>INTERACTIVE</span><strong>Open LINQ → SQL playground</strong><p>Edit a GORM query, choose example patterns and inspect the generated SQL Server Graph query shape.</p></a>
+      </section>
+
+      <section class="doc-section" id="temporal" data-search="temporal history asof current range point in time graph history snapshot">
+        <div class="doc-kicker">TEMPORAL GRAPH</div><h2>Ask what the graph looked like before</h2><p>GORM can capture node and edge history so a point-in-time query reconstructs connected state, not only scalar row snapshots.</p>
+        <pre><code>var snapshot = await context.Set&lt;ServiceNode&gt;()
+    .AsOf(incidentStartedAt)
+    .ToListAsync();</code></pre>
+      </section>
+
+      <section class="doc-section" id="testing" data-search="in memory testing tests reqnroll deterministic provider sql integration">
+        <div class="doc-kicker">TESTING</div><h2>Use the same model in memory</h2><p>In-memory execution keeps unit and BDD tests fast and deterministic. It does not pretend provider behavior is irrelevant; SQL Server integration tests still validate provider-specific behavior.</p>
+      </section>
+
+      <section class="doc-section" id="analysis" data-search="graph intelligence centrality routing components communities impact projection analysis">
+        <div class="doc-kicker">GRAPH INTELLIGENCE</div><h2>Analyze ordinary GORM entities</h2><p>Centrality, routing, components, communities, impact analysis and versioned projections operate over the same graph model instead of forcing a second representation.</p>
+      </section>
+
+      <section class="doc-section" id="changesets" data-search="changeset compiler write plan transaction preview rollback concurrency conflict">
+        <div class="doc-kicker">CHANGESET COMPILER</div><h2>Preview graph writes as a plan</h2><p>The ChangeSet compiler is intended to make graph mutations inspectable before application, preserve rollback semantics and explain concurrency conflicts rather than hiding them.</p>
+      </section>
+
+      <section class="doc-section" id="api-shape" data-search="api reference graphset set node edge outgoing incoming include asof current">
+        <div class="doc-kicker">API SHAPE</div><h2>Core operations at a glance</h2>
+        <div class="api-table"><div><code>Set&lt;TNode&gt;()</code><span>Start a typed node-root query.</span></div><div><code>Outgoing&lt;TEdge,TTarget&gt;()</code><span>Traverse an outgoing typed edge.</span></div><div><code>Incoming&lt;TEdge,TSource&gt;()</code><span>Traverse an incoming typed edge.</span></div><div><code>Include(...)</code><span>Load relationship navigation.</span></div><div><code>AsOf(...)</code><span>Query graph state at a point in time.</span></div><div><code>Current()</code><span>Restrict a temporal graph query to current state.</span></div></div>
+      </section>
+
+      <section class="doc-section" id="providers" data-search="providers sql server graph in memory production tests">
+        <div class="doc-kicker">PROVIDERS</div><h2>Production and test execution have different jobs</h2><p>SQL Server Graph is the production persistence target. The in-memory provider exists for deterministic test execution, not as a claim of provider equivalence.</p>
+      </section>
+
+      <section class="doc-section" id="boundary" data-search="boundary domain policy persistence mechanics business decisions">
+        <div class="doc-kicker">DESIGN BOUNDARY</div><h2>GORM owns persistence mechanics, not your business policy</h2><p>Mapping, translation, change tracking, graph history and graph persistence are framework concerns. Whether a change should happen remains an application decision.</p>
+      </section>
+
+      <section class="doc-section" id="status" data-search="repository status migration source nuget preview public">
+        <div class="doc-kicker">REPOSITORY STATUS</div><h2>The public surface comes before source migration</h2><p>The repository intentionally establishes naming, documentation and product boundaries before the existing implementation source is migrated and packaged. This documentation should therefore distinguish documented API direction from a published binary contract.</p>
+      </section>
+    </main>
+
+    <aside class="toc" aria-label="On this page"><span>ON THIS PAGE</span><a href="#get-started">Quickstart</a><a href="#concepts">Concepts</a><a href="#querying">Querying</a><a href="#traversal">Traversal</a><a href="#temporal">Temporal graph</a><a href="#testing">Testing</a><a href="#api-shape">API shape</a></aside>
+  </div>
+
+  <div id="search-empty" class="search-empty" hidden>No matching documentation section found.</div>
+  <script src="./script.js"></script>
+</body>
+</html>
