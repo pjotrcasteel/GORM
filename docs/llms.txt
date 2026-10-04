@@ -2,37 +2,51 @@
 
 Promise: Model how things connect.
 
-GORM is a strongly typed graph ORM for SQL Server Graph with LINQ-style traversal, relationship-aware loading, change tracking, graph mutations, in-memory execution and temporal history.
+GORM is a strongly typed graph ORM for .NET and SQL Server Graph with explicit nodes and edges, LINQ-style traversal, relationship-aware loading, change tracking, graph mutations, in-memory execution and temporal history.
 
-Documentation:
-- Home: https://pjotrcasteel.github.io/GORM/
-- Learn / docs: https://pjotrcasteel.github.io/GORM/docs.html
-- Interactive LINQ-to-SQL documentation playground: https://pjotrcasteel.github.io/GORM/playground.html
-- Repository: https://github.com/pjotrcasteel/GORM
+Canonical site: https://pjotrcasteel.github.io/GORM/
+Canonical repository: https://github.com/pjotrcasteel/GORM
 
-Core documentation topics:
-- defining typed nodes and edges;
-- identity and conventional scalar mapping;
-- outgoing and incoming graph traversal;
-- Include / ThenInclude relationship loading;
-- LINQ filters, paging and graph query shapes;
-- SQL Server Graph translation and MATCH;
-- temporal graph history with AsOf and Current;
-- in-memory execution for deterministic tests;
-- graph change tracking, connect and disconnect operations.
+## Documentation map
 
-Advanced source material also documents:
-- Graph Intelligence algorithms and projections;
+- Documentation hub: https://pjotrcasteel.github.io/GORM/docs.html
+- Core concepts: https://pjotrcasteel.github.io/GORM/concepts.html
+- Querying and traversal: https://pjotrcasteel.github.io/GORM/querying.html
+- Guides and cookbook: https://pjotrcasteel.github.io/GORM/guides.html
+- API reference: https://pjotrcasteel.github.io/GORM/reference.html
+- Interactive LINQ to SQL playground: https://pjotrcasteel.github.io/GORM/playground.html
+
+## Core model
+
+Nodes are ordinary domain entities that participate in graph topology. Edges are typed directed relationships and may carry their own properties. Id is the default identity convention. Queries begin from Set<TNode>() and use familiar LINQ until graph-specific intent is needed.
+
+Key documented query operations include:
+- Set<TNode>()
+- Where / Select / OrderBy / Skip / Take and aggregates
+- Outgoing<TEdge,TTarget>()
+- Incoming<TEdge,TSource>()
+- Include(...) / ThenInclude(...)
+- WhereId(...) / WhereIds(...)
+- AsOf(...), Current() and temporal range operations
+- async materialization such as ToListAsync(), SingleAsync() and CountAsync()
+
+## Advanced capabilities
+
+Current implementation materials also document:
+- Graph Intelligence algorithms and projections, including centrality, routing, components, communities and impact;
 - Temporal Digital Twin simulation;
 - Explainable Hybrid GraphRAG;
-- Helix query analysis and safe optimization;
-- a graph ChangeSet and transaction compiler.
+- Helix query analysis, generated SQL inspection and safe optimization;
+- a graph ChangeSet and transaction compiler for previewing ordered writes, rollback semantics and concurrency conflicts.
 
-Playground status:
-The current browser playground is intentionally a documentation preview translator for a focused set of documented query shapes. It does not claim to execute the GORM runtime. After implementation source migration, it should be replaced by or verified against the actual GORM expression visitor and SQL generator.
+## Playground status
 
-Public naming note:
-The public repository identity is GORM. The implementation source migration and NuGet identity are intentionally deferred until organization-specific naming is removed and the full .NET 10 suite is green.
+The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy and expected SQL Server Graph concepts but must not be treated as the production translator. After source migration, it should be wired to or continuously verified against the real translator.
 
-Boundary:
-GORM owns graph persistence/query/history mechanics. Analysis and preview APIs remain read-only until the application explicitly saves or applies mutations. Business policy remains application-owned.
+## Repository status
+
+The public repository identity is GORM. Implementation source migration and NuGet publication are intentionally deferred until organization-specific naming is removed, public symbols are validated and the complete .NET 10 build/test/performance suite is green.
+
+## Boundary
+
+GORM owns graph mapping, query translation, change tracking, graph history and graph persistence mechanics. Analysis, preview and simulation remain read-only unless the application explicitly invokes a mutation or save operation. Business policy remains application-owned.
