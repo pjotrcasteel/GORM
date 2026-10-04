@@ -4,21 +4,35 @@ Promise: Model how things connect.
 
 GORM is a strongly typed graph ORM for SQL Server Graph with LINQ-style traversal, relationship-aware loading, change tracking, graph mutations, in-memory execution and temporal history.
 
-Current source material also documents:
+Documentation:
+- Home: https://pjotrcasteel.github.io/GORM/
+- Learn / docs: https://pjotrcasteel.github.io/GORM/docs.html
+- Interactive LINQ-to-SQL documentation playground: https://pjotrcasteel.github.io/GORM/playground.html
+- Repository: https://github.com/pjotrcasteel/GORM
+
+Core documentation topics:
+- defining typed nodes and edges;
+- identity and conventional scalar mapping;
+- outgoing and incoming graph traversal;
+- Include / ThenInclude relationship loading;
+- LINQ filters, paging and graph query shapes;
+- SQL Server Graph translation and MATCH;
+- temporal graph history with AsOf and Current;
+- in-memory execution for deterministic tests;
+- graph change tracking, connect and disconnect operations.
+
+Advanced source material also documents:
 - Graph Intelligence algorithms and projections;
 - Temporal Digital Twin simulation;
 - Explainable Hybrid GraphRAG;
 - Helix query analysis and safe optimization;
 - a graph ChangeSet and transaction compiler.
 
+Playground status:
+The current browser playground is intentionally a documentation preview translator for a focused set of documented query shapes. It does not claim to execute the GORM runtime. After implementation source migration, it should be replaced by or verified against the actual GORM expression visitor and SQL generator.
+
 Public naming note:
-The current implementation materials use the product/package name KPN.IRMA.Gorm. Canonical website: https://pjotrcasteel.github.io/GORM/
-Canonical repository: https://github.com/pjotrcasteel/GORM
-
 The public repository identity is GORM. The implementation source migration and NuGet identity are intentionally deferred until organization-specific naming is removed and the full .NET 10 suite is green.
-
-Brand collision note:
-The public capability name is "ChangeSet & transaction compiler". Source migration includes resolving an internal namespace collision with the separate Forge product family.
 
 Boundary:
 GORM owns graph persistence/query/history mechanics. Analysis and preview APIs remain read-only until the application explicitly saves or applies mutations. Business policy remains application-owned.
