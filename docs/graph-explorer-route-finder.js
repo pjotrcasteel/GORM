@@ -1,26 +1,12 @@
 (()=>{
   const maxHops=20;
-  const $=id=>document.getElementById(id);
 
-  function currentTopology(){
-    const nodes=[...document.querySelectorAll('.graph-node-button')].map(button=>({id:button.dataset.node,type:button.querySelector('small')?.textContent?.trim()??button.dataset.node,label:button.querySelector('strong')?.textContent?.trim()??button.dataset.node}));
-    const byType=new Map(nodes.map(node=>[node.type,node.id]));
-    const edges=[];
-    for(const group of document.querySelectorAll('.graph-edge-group')){
-      const match=(group.getAttribute('aria-label')??'').match(/^([^:]+):\s+([^\s]+)\s+to\s+([^\s]+)$/);
-      if(!match)continue;
-      const [,type,sourceType,targetType]=match,source=byType.get(sourceType),target=byType.get(targetType);
-      if(source&&target)edges.push({id:group.dataset.edge,type,source,target});
-    }
-    return{nodes,edges};
-  }
-
-  function shortestRoute(topology,source,target){
+  function shortestRoute(topology,source,target,limit=maxHops){
     if(source===target)return[];
     const queue=[{node:source,route:[]}],visited=new Set([source]);
     while(queue.length){
       const current=queue.shift();
-      if(current.route.length>=maxHops)continue;
+      if(current.route.length>=limit)continue;
       for(const edge of topology.edges){
         let next=null;
         if(edge.source===current.node)next=edge.target;
@@ -32,6 +18,24 @@
       }
     }
     return null;
+  }
+
+  const host=typeof window!=='undefined'?window:globalThis;
+  host.GormGraphRouteFinderCore=Object.freeze({shortestRoute,maxHops});
+  if(typeof document==='undefined')return;
+
+  const $=id=>document.getElementById(id);
+  function currentTopology(){
+    const nodes=[...document.querySelectorAll('.graph-node-button')].map(button=>({id:button.dataset.node,type:button.querySelector('small')?.textContent?.trim()??button.dataset.node,label:button.querySelector('strong')?.textContent?.trim()??button.dataset.node}));
+    const byType=new Map(nodes.map(node=>[node.type,node.id]));
+    const edges=[];
+    for(const group of document.querySelectorAll('.graph-edge-group')){
+      const match=(group.getAttribute('aria-label')??'').match(/^([^:]+):\s+([^\s]+)\s+to\s+([^\s]+)$/);
+      if(!match)continue;
+      const [,type,sourceType,targetType]=match,source=byType.get(sourceType),target=byType.get(targetType);
+      if(source&&target)edges.push({id:group.dataset.edge,type,source,target});
+    }
+    return{nodes,edges};
   }
 
   function routeDescription(topology,source,edgeIds){
