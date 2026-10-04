@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GORM Querying — LINQ, traversal and SQL Server Graph</title><meta name="description" content="Query GORM with LINQ, traversal, Include, paging, temporal operators and inspect the generated SQL Server Graph shape."><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css"></head>
+<body class="docs-body"><header class="topbar"><div class="topbar-inner wrap-wide"><a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a><div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"><div id="global-search-results" class="global-search-results" hidden></div></div><nav class="top-links"><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav></div></header>
+<div class="docs-shell wrap-wide"><aside class="docs-nav"><div class="nav-group"><span>GET STARTED</span><a href="./docs.html">Overview</a><a href="./docs.html#get-started">Quickstart</a></div><div class="nav-group"><span>CORE CONCEPTS</span><a href="./concepts.html">Graph model</a></div><div class="nav-group"><span>DEVELOP</span><a class="active" href="./querying.html">Querying</a><a href="./guides.html">Guides &amp; cookbook</a><a href="./reference.html">API reference</a></div></aside>
+<main class="docs-content"><section class="docs-hero"><div class="eyebrow">QUERYING</div><h1>Start with LINQ. Add graph intent when the path matters.</h1><p>GORM keeps node-root queries familiar, then adds explicit graph operators for traversal, relationship loading and time-aware inspection.</p><div class="docs-actions"><a class="button" href="./playground.html">Try queries interactively</a></div></section>
+<section class="doc-section" id="roots"><div class="doc-kicker">QUERY ROOTS</div><h2>Begin from a typed node set</h2><pre><code>var services = context.Set&lt;ServiceNode&gt;();</code></pre><p>From there you can use familiar filtering, ordering, projection, paging and aggregation patterns.</p></section>
+<section class="doc-section" id="filters"><div class="doc-kicker">FILTERING</div><h2>Keep ordinary predicates ordinary</h2><pre><code>var active = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.State == ServiceState.Active)
+    .Where(x =&gt; x.Region == "eu-west")
+    .OrderBy(x =&gt; x.Name)
+    .Take(50)
+    .ToListAsync();</code></pre><p>Graph-specific syntax is unnecessary when the query only targets properties on one node type.</p></section>
+<section class="doc-section" id="traversal"><div class="doc-kicker">TRAVERSAL</div><h2>Traversal makes the relationship part of the query</h2><pre><code>var dependencies = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == apiId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><div class="query-pipeline"><span>ServiceNode</span><i>WHERE Id == apiId</i><strong>Outgoing&lt;DependsOnEdge&gt;</strong><span>ServiceNode</span></div><p>This is not just syntactic sugar for a hidden repository join. The edge type and direction are part of the query semantics.</p></section>
+<section class="doc-section" id="chaining"><div class="doc-kicker">CHAINED TRAVERSAL</div><h2>Follow multi-hop relationships deliberately</h2><pre><code>var downstream = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == gatewayId)
+    .Outgoing&lt;RoutesToEdge, ServiceNode&gt;()
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>Each hop should remain typed and inspectable so the query tells the reader which topology is being followed.</p></section>
+<section class="doc-section" id="incoming"><div class="doc-kicker">INCOMING</div><h2>Reverse the question without reversing the model</h2><pre><code>var dependents = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == databaseId)
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>Incoming traversal asks which source nodes point to the current target through the chosen edge type.</p></section>
+<section class="doc-section" id="include"><div class="doc-kicker">INCLUDE</div><h2>Use Include for object materialization</h2><pre><code>var person = await context.Set&lt;PersonNode&gt;()
+    .Include(x =&gt; x.Projects)
+    .SingleAsync(x =&gt; x.Id == personId);</code></pre><p><code>Include</code> is for loading a connected object graph. Traversal is for asking a graph path question. Prefer the operator that communicates the intent of the query.</p></section>
+<section class="doc-section" id="paging"><div class="doc-kicker">PAGING</div><h2>Apply ordering before bounded reads</h2><pre><code>var page = await context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.State == ServiceState.Active)
+    .OrderBy(x =&gt; x.Name)
+    .Skip(100)
+    .Take(50)
+    .ToListAsync();</code></pre><div class="callout"><strong>Predictability</strong><span>Use deterministic ordering when paging. Stable ordering matters even more when results are later used as roots for graph traversal.</span></div></section>
+<section class="doc-section" id="temporal"><div class="doc-kicker">TEMPORAL</div><h2>Move the graph query through time</h2><pre><code>var historical = await context.Set&lt;ServiceNode&gt;()
+    .AsOf(incidentStartedAt)
+    .Where(x =&gt; x.Id == serviceId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
+    .ToListAsync();</code></pre><p>A temporal graph query should interpret node and edge state at the same historical point so topology and scalar state remain coherent.</p></section>
+<section class="doc-section" id="sql"><div class="doc-kicker">SQL INSPECTION</div><h2>Translation should be visible</h2><p>Use the playground to compare query intent with the expected SQL Server Graph shape.</p><div class="compare-grid"><div><span>GORM</span><pre><code>context.Set&lt;PersonNode&gt;()
+    .Where(x =&gt; x.Id == personId)
+    .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre></div><div><span>SQL SHAPE</span><pre><code>SELECT target.*
+FROM PersonNode source,
+     WorksOnEdge edge,
+     ProjectNode target
+WHERE MATCH(source-(edge)-&gt;target)
+  AND source.Id = @personId;</code></pre></div></div><a class="inline-card" href="./playground.html"><span>PLAYGROUND</span><strong>Edit this query</strong><p>Change the LINQ and inspect the translated query shape, graph path and notes.</p></a></section>
+<section class="doc-section" id="performance"><div class="doc-kicker">QUERY DESIGN</div><h2>Keep graph questions focused</h2><div class="concept-grid"><article><span>FILTER EARLY</span><h3>Narrow roots</h3><p>Reduce candidate source nodes before expanding through relationships where semantics allow it.</p></article><article><span>TYPE EDGES</span><h3>Be specific</h3><p>Choose the edge type that represents the domain relationship rather than generic catch-all connections.</p></article><article><span>INSPECT</span><h3>Read the SQL</h3><p>Translation visibility helps catch accidental fan-out, unnecessary materialization and ambiguous intent.</p></article></div></section>
+<nav class="doc-page-nav"><a href="./concepts.html"><span>← PREVIOUS</span><strong>Core concepts</strong></a><a href="./guides.html"><span>NEXT →</span><strong>Guides &amp; cookbook</strong></a></nav></main>
+<aside class="toc"><span>ON THIS PAGE</span><a href="#roots">Query roots</a><a href="#filters">Filtering</a><a href="#traversal">Traversal</a><a href="#chaining">Chaining</a><a href="#include">Include</a><a href="#temporal">Temporal</a><a href="#sql">SQL inspection</a></aside></div><script src="./script.js"></script></body></html>
