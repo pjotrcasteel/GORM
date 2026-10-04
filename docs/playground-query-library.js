@@ -23,6 +23,9 @@
   function loadQuery(query){
     const editor=$('query-editor');if(!editor)return;editor.value=query;editor.dispatchEvent(new Event('input',{bubbles:true}));editor.focus();setOpen(false);setStatus('Query loaded into the editor.');
   }
+  function openSave(){
+    setOpen(true);const input=$('query-save-name');if(input&&!input.value)input.value=catalogTitle(currentQuery())??'';input?.focus();
+  }
   function saveCurrent(){
     const query=currentQuery(),input=$('query-save-name');if(!query){setStatus('Nothing to save: the editor is empty.');return;}
     const suggested=catalogTitle(query)??queryTitle(query);const name=(input?.value.trim()||suggested).slice(0,60);if(!name){setStatus('Give the query a name first.');return;}
@@ -68,7 +71,7 @@
   function buildPanel(){
     const toolbar=document.querySelector('.playground-toolbar'),actions=document.querySelector('.playground-actions');if(!toolbar||!actions||$('query-library'))return;
     const style=document.createElement('link');style.rel='stylesheet';style.href='./playground-query-library.css';document.head.appendChild(style);
-    const saveButton=document.createElement('button');saveButton.type='button';saveButton.className='tiny-button';saveButton.id='save-query';saveButton.textContent='Save query';saveButton.addEventListener('click',()=>{setOpen(true);const input=$('query-save-name');if(input&&!input.value)input.value=catalogTitle(currentQuery())??'';input?.focus();});
+    const saveButton=document.createElement('button');saveButton.type='button';saveButton.className='tiny-button';saveButton.id='save-query';saveButton.textContent='Save query';saveButton.title='Save query (Ctrl/Cmd+S)';saveButton.addEventListener('click',openSave);
     const toggle=document.createElement('button');toggle.type='button';toggle.className='tiny-button query-library-toggle';toggle.id='query-library-toggle';toggle.textContent='Query library';toggle.setAttribute('aria-expanded','false');toggle.addEventListener('click',()=>setOpen($('query-library').hidden));actions.append(saveButton,toggle);
 
     const panel=document.createElement('section');panel.id='query-library';panel.className='query-library';panel.hidden=true;
@@ -77,6 +80,9 @@
     $('query-library-close').addEventListener('click',()=>setOpen(false));$('save-current-query').addEventListener('click',saveCurrent);$('clear-query-history').addEventListener('click',clearHistory);$('query-save-name').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();saveCurrent();}});render();
   }
 
-  function bind(){buildPanel();document.addEventListener('gorm:playground-ran',event=>recordRun(event.detail));}
+  function bind(){
+    buildPanel();document.addEventListener('gorm:playground-ran',event=>recordRun(event.detail));
+    $('query-editor')?.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();openSave();}});
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
