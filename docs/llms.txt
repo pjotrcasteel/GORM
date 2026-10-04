@@ -13,6 +13,7 @@ Canonical repository: https://github.com/pjotrcasteel/GORM
 - Core concepts: https://pjotrcasteel.github.io/GORM/concepts.html
 - Querying and traversal: https://pjotrcasteel.github.io/GORM/querying.html
 - Guides and cookbook: https://pjotrcasteel.github.io/GORM/guides.html
+- Advanced graph capabilities: https://pjotrcasteel.github.io/GORM/advanced.html
 - API reference: https://pjotrcasteel.github.io/GORM/reference.html
 - Interactive LINQ to SQL playground: https://pjotrcasteel.github.io/GORM/playground.html
 
@@ -32,12 +33,14 @@ Key documented query operations include:
 
 ## Advanced capabilities
 
-Current implementation materials also document:
-- Graph Intelligence algorithms and projections, including centrality, routing, components, communities and impact;
-- Temporal Digital Twin simulation;
-- Explainable Hybrid GraphRAG;
+Implementation materials also describe deeper capabilities over the same GORM graph runtime:
+- Graph Intelligence for centrality, routing, components, communities and impact analysis;
+- Temporal Digital Twin simulation and isolated what-if scenarios;
+- Explainable GraphRAG with path-aware graph evidence and explicit security boundaries;
 - Helix query analysis, generated SQL inspection and safe optimization;
-- a graph ChangeSet and transaction compiler for previewing ordered writes, rollback semantics and concurrency conflicts.
+- a ChangeSet and transaction compiler for inspectable ordered writes, rollback semantics and concurrency conflicts.
+
+These are documented as capabilities, not as guaranteed public signatures. Exact namespaces, method signatures and package boundaries must be validated after source migration.
 
 ## Playground status
 
