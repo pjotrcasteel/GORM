@@ -57,8 +57,8 @@
       const wrapper=document.createElement('div');wrapper.className='code-sample';pre.parentNode.insertBefore(wrapper,pre);wrapper.appendChild(pre);
       const toolbar=document.createElement('div');toolbar.className='code-toolbar';
       const label=document.createElement('span');label.textContent=isGormQuery(text)?'GORM / C#':'Code';toolbar.appendChild(label);
-      if(isGormQuery(text)){const run=document.createElement('a');run.href=playgroundUrl(text);run.textContent='Run in playground';toolbar.appendChild(run);}
-      const copy=document.createElement('button');copy.type='button';copy.className='code-copy';copy.textContent='Copy';copy.addEventListener('click',()=>copyCode(copy,text));toolbar.appendChild(copy);
+      if(isGormQuery(text)&&!wrapper.closest('a')){const run=document.createElement('a');run.href=playgroundUrl(text);run.textContent='Run in playground';toolbar.appendChild(run);}
+      const copy=document.createElement('button');copy.type='button';copy.className='code-copy';copy.textContent='Copy';copy.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();copyCode(copy,text);});toolbar.appendChild(copy);
       wrapper.insertBefore(toolbar,pre);
     });
   }
