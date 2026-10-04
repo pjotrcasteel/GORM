@@ -48,7 +48,8 @@ function validateLinks() {
             const targetHtml = fs.readFileSync(local.target, 'utf8');
             const escapedHash = local.hash.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const anchorPattern = new RegExp(`(?:id|name)=["']${escapedHash}["']`);
-            if (!anchorPattern.test(targetHtml)) fail(`${htmlName}: missing anchor '#${local.hash}' in ${path.basename(local.target)}`);
+            const playgroundPresetPattern = path.basename(local.target) === 'playground.html' ? new RegExp(`data-example=["']${escapedHash}["']`) : null;
+            if (!anchorPattern.test(targetHtml) && !playgroundPresetPattern?.test(targetHtml)) fail(`${htmlName}: missing anchor or route '#${local.hash}' in ${path.basename(local.target)}`);
         }
     }
     console.log(`Checked local references in ${htmlFiles.length} HTML files.`);
