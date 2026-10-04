@@ -1,111 +1,46 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="author" content="Pjotr Casteel">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="author" content="Pjotr Casteel">
   <title>GORM — Graph ORM for .NET</title>
-  <meta name="description" content="GORM is a strongly typed graph ORM for .NET and SQL Server Graph. Learn the model, query connected data and explore LINQ-to-SQL translation.">
-  <meta name="theme-color" content="#111018">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="GORM — Model how things connect">
-  <meta property="og:description" content="Documentation, concepts and an interactive LINQ-to-SQL playground for GORM.">
-  <meta property="og:url" content="https://pjotrcasteel.github.io/GORM/">
-  <meta property="og:image" content="https://pjotrcasteel.github.io/GORM/social-preview.svg">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="canonical" href="https://pjotrcasteel.github.io/GORM/">
-  <link rel="icon" href="./logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css">
+  <meta name="description" content="GORM is a strongly typed graph ORM for .NET and SQL Server Graph. Learn the model, run examples and inspect LINQ-to-SQL translation.">
+  <meta name="theme-color" content="#111018"><meta property="og:type" content="website"><meta property="og:title" content="GORM — Model how things connect"><meta property="og:description" content="Documentation, runnable examples and an interactive LINQ-to-SQL playground for GORM."><meta property="og:url" content="https://pjotrcasteel.github.io/GORM/"><meta property="og:image" content="https://pjotrcasteel.github.io/GORM/social-preview.svg"><meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://pjotrcasteel.github.io/GORM/"><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="graph-grid" aria-hidden="true"></div>
-  <header class="topbar">
-    <div class="topbar-inner wrap-wide">
-      <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span></a>
-      <nav class="top-links" aria-label="Primary navigation">
-        <a href="./docs.html">Docs</a>
-        <a href="./concepts.html">Concepts</a>
-        <a href="./querying.html">Querying</a>
-        <a href="./playground.html">Playground</a>
-        <a href="https://github.com/pjotrcasteel/GORM">GitHub</a>
-      </nav>
-      <a class="top-cta" href="./docs.html#get-started">Get started</a>
-    </div>
-  </header>
+<div class="graph-grid" aria-hidden="true"></div>
+<header class="topbar"><div class="topbar-inner wrap-wide"><a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span></a><nav class="top-links" aria-label="Primary navigation"><a href="./docs.html">Docs</a><a href="./concepts.html">Concepts</a><a href="./querying.html">Querying</a><a href="./examples.html">Examples</a><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav><a class="top-cta" href="./docs.html#get-started">Get started</a></div></header>
 
-  <main>
-    <section class="hero-home wrap-wide">
-      <div class="hero-copy reveal">
-        <div class="eyebrow">Graph ORM for .NET + SQL Server Graph</div>
-        <h1>Model how things <span>connect.</span></h1>
-        <p class="hero-lead">GORM makes nodes, edges and traversals first-class .NET concepts. Query connected data with a strongly typed API, inspect the SQL shape, test the same model in memory and reason about graph history over time.</p>
-        <div class="hero-actions">
-          <a class="button" href="./docs.html#get-started">Build your first graph</a>
-          <a class="button ghost" href="./playground.html">Try LINQ → SQL</a>
-        </div>
-        <div class="hero-meta"><span>SQL Server Graph</span><span>LINQ-style traversal</span><span>Temporal graph</span><span>In-memory tests</span></div>
-      </div>
-
-      <div class="query-demo reveal delay-1">
-        <div class="demo-toolbar"><span></span><span></span><span></span><strong>Query.cs</strong></div>
-        <pre><code><span class="kw">var</span> projects = <span class="kw">await</span> context.Set&lt;PersonNode&gt;()
+<main>
+<section class="hero-home wrap-wide">
+  <div class="hero-copy reveal"><div class="eyebrow">Graph ORM for .NET + SQL Server Graph</div><h1>Model how things <span>connect.</span></h1><p class="hero-lead">GORM makes nodes, edges and traversals first-class .NET concepts. Query connected data with a strongly typed API, inspect the SQL shape, test the same model in memory and reason about graph history over time.</p><div class="hero-actions"><a class="button" href="./docs.html#get-started">Build your first graph</a><a class="button ghost" href="./examples.html">Run examples</a></div><div class="hero-meta"><span>SQL Server Graph</span><span>LINQ-style traversal</span><span>Temporal graph</span><span>In-memory tests</span></div></div>
+  <div class="query-demo reveal delay-1"><div class="demo-toolbar"><span></span><span></span><span></span><strong>Query.cs</strong></div><pre><code><span class="kw">var</span> projects = <span class="kw">await</span> context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
     .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()
-    .ToListAsync();</code></pre>
-        <div class="demo-arrow">LINQ <span>→</span> SQL Server Graph</div>
-        <pre class="sql-preview"><code><span class="kw">SELECT</span> target.*
+    .ToListAsync();</code></pre><div class="demo-arrow">LINQ <span>→</span> GRAPH INTENT <span>→</span> SQL</div><pre class="sql-preview"><code><span class="kw">SELECT</span> target.*
 <span class="kw">FROM</span> PersonNode source,
      WorksOnEdge edge,
      ProjectNode target
 <span class="kw">WHERE MATCH</span>(source-(edge)-&gt;target)
-  <span class="kw">AND</span> source.Id = @personId;</code></pre>
-        <a class="demo-link" href="./playground.html">Open the interactive playground →</a>
-      </div>
-    </section>
+  <span class="kw">AND</span> source.Id = @personId;</code></pre><a class="demo-link" href="./playground.html#outgoing">Inspect this query in the playground →</a></div>
+</section>
 
-    <section class="signal-strip"><div class="wrap-wide signals"><span>Strongly typed nodes &amp; edges</span><span>Outgoing / incoming traversal</span><span>Relationship-aware loading</span><span>Change tracking</span><span>Point-in-time graph queries</span></div></section>
+<section class="signal-strip"><div class="wrap-wide signals"><span>Strongly typed nodes &amp; edges</span><span>Outgoing / incoming traversal</span><span>Runnable docs</span><span>Shareable query inspector</span><span>Point-in-time graph queries</span></div></section>
 
-    <section class="section-home wrap-wide">
-      <div class="section-heading reveal"><div class="eyebrow">Learn GORM</div><h2>Documentation that starts with the job you are trying to do.</h2><p>Start small, then move from the graph model into traversal, query translation, history and testing. The documentation is organized as a framework manual rather than a product brochure.</p></div>
-      <div class="learning-grid">
-        <a class="learn-card reveal" href="./docs.html#get-started"><span>01 · QUICKSTART</span><h3>Build your first graph</h3><p>Define a node and edge, create the context shape and run the first typed traversal.</p><b>Start here →</b></a>
-        <a class="learn-card reveal delay-1" href="./concepts.html"><span>02 · CONCEPTS</span><h3>Understand the graph model</h3><p>Nodes, edges, identity, relationship direction, object navigation and the persistence boundary.</p><b>Read concepts →</b></a>
-        <a class="learn-card reveal delay-2" href="./querying.html"><span>03 · QUERYING</span><h3>Query connected data</h3><p>Filters, traversal, includes, chained graph intent and what that means for SQL Server Graph.</p><b>Explore querying →</b></a>
-        <a class="learn-card reveal delay-3" href="./playground.html"><span>04 · PLAYGROUND</span><h3>See the SQL shape</h3><p>Edit focused GORM LINQ examples and immediately inspect the SQL Server Graph query shape beside them.</p><b>Open playground →</b></a>
-      </div>
-    </section>
+<section class="section-home wrap-wide"><div class="section-heading reveal"><div class="eyebrow">Learn GORM</div><h2>Documentation that starts with the job you are trying to do.</h2><p>Start small, then move from the graph model into traversal, runnable examples, query translation, history and testing.</p></div><div class="learning-grid">
+  <a class="learn-card reveal" href="./docs.html#get-started"><span>01 · QUICKSTART</span><h3>Build your first graph</h3><p>Define a node and edge and run the first typed traversal.</p><b>Start here →</b></a>
+  <a class="learn-card reveal delay-1" href="./concepts.html"><span>02 · CONCEPTS</span><h3>Understand the graph model</h3><p>Nodes, edges, identity, relationship direction and the persistence boundary.</p><b>Read concepts →</b></a>
+  <a class="learn-card reveal delay-2" href="./examples.html"><span>03 · EXAMPLES</span><h3>Run before you read everything</h3><p>Open focused traversal, paging, temporal and Include examples directly in the inspector.</p><b>Browse examples →</b></a>
+  <a class="learn-card reveal delay-3" href="./playground.html"><span>04 · PLAYGROUND</span><h3>Inspect what GORM sees</h3><p>Edit LINQ and inspect graph anatomy, parameters, translation stages and SQL shape.</p><b>Open playground →</b></a>
+</div></section>
 
-    <section class="section-home alt-section">
-      <div class="wrap-wide feature-split">
-        <div class="section-heading reveal"><div class="eyebrow">A graph-first persistence model</div><h2>Relationships stop being hidden join plumbing.</h2><p>GORM promotes graph intent into the API: traverse relationships directly when the path matters, or load navigation properties when the object graph is the more useful result shape.</p></div>
-        <div class="feature-stack reveal delay-1">
-          <div><span>TRAVERSE</span><strong>Outgoing&lt;TEdge, TTarget&gt;()</strong><p>Move from one typed node set to another through an explicit edge type.</p></div>
-          <div><span>LOAD</span><strong>Include(...) / ThenInclude(...)</strong><p>Materialize related graph state when you want a connected object graph.</p></div>
-          <div><span>TIME</span><strong>AsOf(...) / Current()</strong><p>Inspect connected state at a moment in time instead of only current rows.</p></div>
-          <div><span>TEST</span><strong>In-memory execution</strong><p>Use the same graph model in fast deterministic tests while keeping provider integration tests explicit.</p></div>
-        </div>
-      </div>
-    </section>
+<section class="section-home alt-section"><div class="wrap-wide feature-split"><div class="section-heading reveal"><div class="eyebrow">A graph-first persistence model</div><h2>Relationships stop being hidden join plumbing.</h2><p>GORM promotes graph intent into the API: traverse relationships directly when the path matters, or load navigation properties when the object graph is the more useful result shape.</p></div><div class="feature-stack reveal delay-1"><div><span>TRAVERSE</span><strong>Outgoing&lt;TEdge, TTarget&gt;()</strong><p>Move from one typed node set to another through an explicit edge type.</p></div><div><span>LOAD</span><strong>Include(...) / ThenInclude(...)</strong><p>Materialize related graph state when you want a connected object graph.</p></div><div><span>TIME</span><strong>AsOf(...) / Current()</strong><p>Inspect connected state at a moment in time instead of only current rows.</p></div><div><span>TEST</span><strong>In-memory execution</strong><p>Use the same graph model in fast deterministic tests while keeping provider integration tests explicit.</p></div></div></div></section>
 
-    <section class="section-home wrap-wide">
-      <div class="section-heading reveal"><div class="eyebrow">Beyond CRUD</div><h2>A graph becomes something you can inspect and reason about.</h2></div>
-      <div class="capability-grid">
-        <article class="capability reveal"><span>CORE</span><h3>Graph persistence</h3><p>Typed model configuration, node/edge sets, traversal, includes, change tracking and graph mutations.</p></article>
-        <article class="capability reveal"><span>TIME</span><h3>Temporal graph</h3><p>Node and edge history for current and point-in-time graph inspection.</p></article>
-        <article class="capability reveal"><span>ANALYSIS</span><h3>Graph intelligence</h3><p>Centrality, routing, components, communities, impact and versioned projections.</p></article>
-        <article class="capability reveal"><span>QUERY</span><h3>Helix</h3><p>Query analysis, generated SQL inspection and semantics-preserving graph-query optimization.</p></article>
-      </div>
-    </section>
+<section class="section-home wrap-wide"><div class="section-heading reveal"><div class="eyebrow">Beyond CRUD</div><h2>A graph becomes something you can inspect and reason about.</h2></div><div class="capability-grid"><article class="capability reveal"><span>CORE</span><h3>Graph persistence</h3><p>Typed model configuration, node/edge sets, traversal, includes, change tracking and graph mutations.</p></article><article class="capability reveal"><span>TIME</span><h3>Temporal graph</h3><p>Node and edge history for current and point-in-time graph inspection.</p></article><article class="capability reveal"><span>ANALYSIS</span><h3>Graph intelligence</h3><p>Centrality, routing, components, communities, impact and versioned projections.</p></article><article class="capability reveal"><span>QUERY</span><h3>Helix</h3><p>Query analysis, generated SQL inspection and semantics-preserving graph-query optimization.</p></article></div></section>
 
-    <section class="section-home wrap-wide">
-      <div class="docs-cta reveal">
-        <div><div class="eyebrow">Ready to go deeper?</div><h2>Use the docs like a framework manual.</h2><p>Move from your first model to traversal, temporal queries, testing and advanced graph capabilities without hunting through one long landing page.</p></div>
-        <div class="hero-actions"><a class="button" href="./docs.html">Browse documentation</a><a class="button ghost" href="./playground.html">Open playground</a></div>
-      </div>
-    </section>
-  </main>
+<section class="section-home wrap-wide"><div class="docs-cta reveal"><div><div class="eyebrow">Ready to go deeper?</div><h2>Use the docs like a framework manual — or start by running code.</h2><p>Move from a runnable query to concepts, traversal, temporal behavior and advanced capabilities without hunting through one long landing page.</p></div><div class="hero-actions"><a class="button" href="./docs.html">Browse documentation</a><a class="button ghost" href="./examples.html">Run examples</a></div></div></section>
+</main>
 
-  <footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><span class="signature-mark">PC</span> PjotrCasteel · open source</div></footer>
-  <script src="./script.js"></script>
-</body>
-</html>
+<footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><span class="signature-mark">PC</span> PjotrCasteel · open source</div></footer>
+<script src="./script.js"></script>
+</body></html>
