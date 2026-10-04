@@ -55,6 +55,21 @@ function validateLinks() {
     console.log(`Checked local references in ${htmlFiles.length} HTML files.`);
 }
 
+function validatePlaygroundArchitecture() {
+    const html = fs.readFileSync(path.join(docsRoot, 'playground.html'), 'utf8');
+    const requiredScripts = ['playground-preview-engine.js', 'playground-adapter.js', 'playground-contracts.js', 'playground-shell.js', 'playground-runtime.js'];
+    for (const script of requiredScripts) {
+        const matches = html.match(new RegExp(`<script\\s+src=["']\\./${script.replace('.', '\\.')}["']`, 'g')) ?? [];
+        if (matches.length !== 1) fail(`playground.html: expected exactly one ${script} script reference, found ${matches.length}`);
+    }
+    if (/<script\s+src=["']\.\/script\.js["']/.test(html)) fail('playground.html: general script.js must not own playground behavior');
+
+    const shellIndex = html.indexOf('./playground-shell.js');
+    const runtimeIndex = html.indexOf('./playground-runtime.js');
+    if (shellIndex < 0 || runtimeIndex < 0 || shellIndex > runtimeIndex) fail('playground.html: playground shell must load before playground runtime');
+    console.log('Checked single playground execution pipeline.');
+}
+
 async function validatePlaygroundContracts() {
     global.window = global;
     require(path.join(docsRoot, 'playground-preview-engine.js'));
@@ -89,6 +104,7 @@ async function validatePlaygroundContracts() {
 (async () => {
     validateJavaScript();
     validateLinks();
+    validatePlaygroundArchitecture();
     await validatePlaygroundContracts();
     if (failures.length) {
         console.error(`\nDocumentation validation failed with ${failures.length} issue(s).`);
