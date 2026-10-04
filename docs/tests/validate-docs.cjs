@@ -57,18 +57,22 @@ function validateLinks() {
 
 function validatePlaygroundArchitecture() {
     const html = fs.readFileSync(path.join(docsRoot, 'playground.html'), 'utf8');
-    const requiredScripts = ['playground-preview-engine.js', 'playground-adapter.js', 'playground-examples.js', 'playground-contracts.js', 'playground-shell.js', 'playground-runtime.js'];
+    const requiredScripts = ['playground-preview-engine.js', 'playground-adapter.js', 'playground-examples.js', 'playground-contracts.js', 'playground-shell.js', 'playground-query-library.js', 'playground-runtime.js'];
     for (const script of requiredScripts) {
         const matches = html.match(new RegExp(`<script\\s+src=["']\\./${script.replace('.', '\\.')}["']`, 'g')) ?? [];
         if (matches.length !== 1) fail(`playground.html: expected exactly one ${script} script reference, found ${matches.length}`);
     }
     if (/<script\s+src=["']\.\/script\.js["']/.test(html)) fail('playground.html: general script.js must not own playground behavior');
+    if (!fs.existsSync(path.join(docsRoot, 'playground-query-library.css'))) fail('playground query library stylesheet is missing');
 
     const examplesIndex = html.indexOf('./playground-examples.js');
     const contractsIndex = html.indexOf('./playground-contracts.js');
     const shellIndex = html.indexOf('./playground-shell.js');
+    const libraryIndex = html.indexOf('./playground-query-library.js');
     const runtimeIndex = html.indexOf('./playground-runtime.js');
-    if (examplesIndex < 0 || contractsIndex < examplesIndex || shellIndex < contractsIndex || runtimeIndex < shellIndex) fail('playground.html: examples, contracts, shell and runtime must load in dependency order');
+    if (examplesIndex < 0 || contractsIndex < examplesIndex || shellIndex < contractsIndex || libraryIndex < shellIndex || runtimeIndex < libraryIndex) {
+        fail('playground.html: examples, contracts, shell, query library and runtime must load in dependency order');
+    }
     console.log('Checked single playground execution pipeline.');
 }
 
