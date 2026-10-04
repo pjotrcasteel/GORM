@@ -81,7 +81,7 @@
     panel.innerHTML='<div class="route-finder-head"><div><span>TRAVERSAL ROUTE FINDER</span><strong>Find the shortest typed route between two node types.</strong><p>This searches the editable model topology and composes the existing Outgoing&lt;&gt; / Incoming&lt;&gt; traversal chain. It does not query database records or introduce a new GORM shortest-path operator.</p></div><div class="route-finder-badge">MODEL ROUTE · ≤20 HOPS</div></div><div class="route-finder-controls"><label><span>FROM</span><select id="route-from" aria-label="Route source node"></select></label><div class="route-finder-arrow">→</div><label><span>TO</span><select id="route-to" aria-label="Route target node"></select></label><button id="find-route" type="button" class="tiny-button">Find typed route</button></div><div id="route-finder-result" class="route-finder-result"><span><strong>Choose two node types.</strong> The resulting traversal will appear in the existing path and query panels.</span><span>Model topology only</span></div>';
     presets.insertAdjacentElement('afterend',panel);$('find-route').addEventListener('click',find);populate();
     const observer=new MutationObserver(()=>queueMicrotask(populate));
-    observer.observe($('graph-nodes'),{childList:true});observer.observe($('graph-edges'),{childList:true});
+    observer.observe($('graph-nodes'),{childList:true});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
