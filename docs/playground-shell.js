@@ -1,13 +1,8 @@
 (()=>{
   const draftKey='gorm-playground-draft';
-  const examples={
-    outgoing:`var projects = await context.Set<PersonNode>()\n    .Where(x => x.Id == personId)\n    .Outgoing<WorksOnEdge, ProjectNode>()\n    .ToListAsync();`,
-    incoming:`var dependents = await context.Set<ServiceNode>()\n    .Where(x => x.Id == databaseId)\n    .Incoming<DependsOnEdge, ServiceNode>()\n    .ToListAsync();`,
-    chained:`var databases = await context.Set<ServiceNode>()\n    .Where(x => x.Id == gatewayId)\n    .Outgoing<RoutesToEdge, ServiceNode>()\n    .Outgoing<DependsOnEdge, DatabaseNode>()\n    .ToListAsync();`,
-    filter:`var services = await context.Set<ServiceNode>()\n    .Where(x => x.State == ServiceState.Active)\n    .OrderBy(x => x.Name)\n    .Skip(20)\n    .Take(25)\n    .ToListAsync();`,
-    temporal:`var snapshot = await context.Set<ServiceNode>()\n    .AsOf(incidentStartedAt)\n    .Where(x => x.Name == serviceName)\n    .ToListAsync();`,
-    include:`var person = await context.Set<PersonNode>()\n    .Include(x => x.Projects)\n    .SingleAsync(x => x.Id == personId);`
-  };
+  const catalog=window.GormPlaygroundExamples??[];
+  const examples=Object.fromEntries(catalog.map(example=>[example.key,example.query]));
+  const defaultExample=catalog[0]?.key??null;
   const $=id=>document.getElementById(id);
 
   function encodeQuery(value){
@@ -31,9 +26,10 @@
 
   function bind(){
     const editor=$('query-editor');if(!editor)return;
+    if(!defaultExample){$('query-status').textContent='No playground examples configured';return;}
     const shared=decodeQuery(new URLSearchParams(location.search).get('q')??'');
     const hashExample=location.hash.slice(1);
-    let active=hashExample in examples?hashExample:'outgoing';
+    let active=hashExample in examples?hashExample:defaultExample;
     const initial=shared||examples[active];
     const saved=readDraft();
     setQuery(editor,initial,false);
