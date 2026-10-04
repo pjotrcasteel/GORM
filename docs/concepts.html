@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Concepts — Nodes, edges and graph persistence</title>
+  <meta name="description" content="Understand the GORM graph model: nodes, edges, relationship direction, identity, change tracking and provider boundaries.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+</head>
+<body class="docs-body">
+<header class="topbar"><div class="topbar-inner wrap-wide"><a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a><div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"><div id="global-search-results" class="global-search-results" hidden></div></div><nav class="top-links"><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav></div></header>
+<div class="docs-shell wrap-wide">
+<aside class="docs-nav" aria-label="Documentation navigation">
+  <div class="nav-group"><span>GET STARTED</span><a href="./docs.html">Overview</a><a href="./docs.html#get-started">Quickstart</a></div>
+  <div class="nav-group"><span>CORE CONCEPTS</span><a class="active" href="./concepts.html">Graph model</a><a href="#nodes">Nodes</a><a href="#edges">Edges</a><a href="#relationships">Relationships</a><a href="#tracking">Change tracking</a></div>
+  <div class="nav-group"><span>DEVELOP</span><a href="./querying.html">Querying</a><a href="./guides.html">Guides &amp; cookbook</a><a href="./reference.html">API reference</a></div>
+</aside>
+<main class="docs-content">
+<section class="docs-hero"><div class="eyebrow">CORE CONCEPTS</div><h1>Think in topology, not hidden joins.</h1><p>GORM keeps graph structure explicit. A node is a domain entity, an edge is a typed relationship, and traversal expresses how a query moves through that topology.</p></section>
+<section class="doc-section" id="mental-model"><div class="doc-kicker">MENTAL MODEL</div><h2>Three layers, one model</h2><div class="concept-grid"><article><span>DOMAIN</span><h3>CLR types</h3><p>Your entities describe the domain: services, people, projects, devices and their data.</p></article><article><span>GRAPH</span><h3>Nodes + edges</h3><p>Types opt into graph identity and relationships. Direction and edge type become queryable facts.</p></article><article><span>PROVIDER</span><h3>SQL Server Graph</h3><p>GORM translates graph intent to node tables, edge tables, predicates and SQL Server Graph <code>MATCH</code> expressions.</p></article></div></section>
+<section class="doc-section" id="nodes"><div class="doc-kicker">NODES</div><h2>Nodes are ordinary domain entities with graph identity</h2><p>A node participates in graph relationships while keeping ordinary scalar properties. <code>Id</code> is the default identity convention.</p><pre><code>public sealed class ServiceNode : Node
+{
+    public string Name { get; set; } = string.Empty;
+    public ServiceState State { get; set; }
+    public string? Region { get; set; }
+}</code></pre><div class="callout"><strong>Design rule</strong><span>Use a node because the entity participates in meaningful topology, not merely because it is stored in SQL.</span></div></section>
+<section class="doc-section" id="edges"><div class="doc-kicker">EDGES</div><h2>An edge is data, not just a foreign key</h2><p>Edges can have identity and properties of their own. This is useful when the relationship itself carries semantics such as priority, role, weight or provenance.</p><pre><code>public sealed class DependsOnEdge : Edge
+{
+    public DependencyKind Kind { get; set; }
+    public bool IsCritical { get; set; }
+}</code></pre></section>
+<section class="doc-section" id="relationships"><div class="doc-kicker">RELATIONSHIPS</div><h2>Direction is explicit</h2><p>For <code>api -(DependsOn)-&gt; database</code>, outgoing traversal from <code>api</code> returns dependencies; incoming traversal from <code>database</code> returns dependents.</p><div class="compare-grid"><div><span>OUTGOING</span><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == apiId)
+    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()</code></pre></div><div><span>INCOMING</span><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == databaseId)
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()</code></pre></div></div><p>Traversal answers a path question. <code>Include</code> answers an object-materialization question. They are related but intentionally different tools.</p></section>
+<section class="doc-section" id="navigations"><div class="doc-kicker">NAVIGATIONS</div><h2>Navigation properties remain graph-aware</h2><p>Navigation collections can model connected entities for object use without turning the relationship into a scalar column.</p><pre><code>public sealed class PersonNode : Node
+{
+    public string Name { get; set; } = string.Empty;
+    public List&lt;ProjectNode&gt; Projects { get; set; } = [];
+}</code></pre></section>
+<section class="doc-section" id="tracking"><div class="doc-kicker">CHANGE TRACKING</div><h2>Topology changes are first-class changes</h2><p>A graph unit of work may contain scalar node changes, edge-property changes, new connections and disconnections. GORM treats those as explicit persistence work instead of hiding them behind collection manipulation.</p><div class="api-table"><div><code>Node modified</code><span>Scalar state changed.</span></div><div><code>Edge modified</code><span>Relationship metadata changed.</span></div><div><code>Connect</code><span>A new topology relation is created.</span></div><div><code>Disconnect</code><span>An existing topology relation is removed.</span></div></div></section>
+<section class="doc-section" id="temporal-model"><div class="doc-kicker">TEMPORAL MODEL</div><h2>History includes topology</h2><p>Historical inspection is only useful if node history and edge history can be reasoned about together. Point-in-time graph queries should reconstruct what was connected at that moment.</p><pre><code>var snapshot = await context.Set&lt;ServiceNode&gt;()
+    .AsOf(incidentStartedAt)
+    .ToListAsync();</code></pre></section>
+<section class="doc-section" id="provider-boundary"><div class="doc-kicker">PROVIDER BOUNDARY</div><h2>Same model does not mean identical providers</h2><p>The in-memory execution path exists for deterministic tests. SQL Server Graph remains the production persistence semantics that provider-level integration tests must validate.</p><div class="warning"><strong>Important</strong><p>Never use a passing in-memory test as proof that provider-specific SQL translation, concurrency or temporal behavior is correct.</p></div></section>
+<nav class="doc-page-nav"><a href="./docs.html"><span>← PREVIOUS</span><strong>Overview &amp; quickstart</strong></a><a href="./querying.html"><span>NEXT →</span><strong>Querying GORM</strong></a></nav>
+</main>
+<aside class="toc"><span>ON THIS PAGE</span><a href="#mental-model">Mental model</a><a href="#nodes">Nodes</a><a href="#edges">Edges</a><a href="#relationships">Relationships</a><a href="#tracking">Change tracking</a><a href="#provider-boundary">Provider boundary</a></aside>
+</div><script src="./script.js"></script></body></html>
