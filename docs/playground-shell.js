@@ -23,7 +23,11 @@
   }
   function playgroundUrl(query){const url=new URL('./playground.html',location.href);url.searchParams.set('q',encodeQuery(query));return url.href;}
   function setActive(key){document.querySelectorAll('.preset').forEach(button=>button.classList.toggle('active',button.dataset.example===key));}
-  function setQuery(editor,value){editor.value=value;try{localStorage.setItem(draftKey,value);}catch{}}
+  function setQuery(editor,value,persist=true){
+    editor.value=value;
+    if(persist){try{localStorage.setItem(draftKey,value);}catch{}}
+  }
+  function readDraft(){try{return localStorage.getItem(draftKey);}catch{return null;}}
 
   function bind(){
     const editor=$('query-editor');if(!editor)return;
@@ -31,7 +35,8 @@
     const hashExample=location.hash.slice(1);
     let active=hashExample in examples?hashExample:'outgoing';
     const initial=shared||examples[active];
-    setQuery(editor,initial);
+    const saved=readDraft();
+    setQuery(editor,initial,false);
 
     if(shared){setActive('');$('query-status').textContent='Shared query loaded';}
     else setActive(active);
@@ -57,7 +62,6 @@
       try{localStorage.setItem(draftKey,editor.value);}catch{}
     });
 
-    let saved=null;try{saved=localStorage.getItem(draftKey);}catch{}
     const restore=$('restore-query');
     if(!shared&&saved&&saved!==initial&&restore){
       restore.hidden=false;
