@@ -51,7 +51,11 @@ These are documented as capabilities, not as guaranteed public signatures. Exact
 
 ## Playground status
 
-The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy, translation stages, bind parameters, diagnostics and expected SQL Server Graph concepts but must not be treated as the production translator. After source migration, it should be wired to or continuously verified against the real translator.
+The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy, translation stages, bind parameters, diagnostics and expected SQL Server Graph concepts but must not be treated as the production translator.
+
+The playground UI is intentionally separated from the translator implementation. `playground-adapter.js` resolves an optional `window.GormPlaygroundEngine` and otherwise falls back to `playground-preview-engine.js`. A translator exposes metadata plus `translate(query)` and returns an object containing at least `ok`, `sql` and `model`; `notes` is optional UI context. This is the integration boundary the migrated .NET translator should implement through a sandboxed adapter.
+
+Six documentation contracts cover outgoing traversal, incoming traversal, chained traversal, filter/paging, temporal AsOf and Include. CI validates JavaScript syntax, internal documentation links/routes and these translator contracts on pull requests and main-branch documentation changes.
 
 ## Repository status
 
