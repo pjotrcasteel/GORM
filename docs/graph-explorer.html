@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Graph Explorer — Build typed traversal paths visually</title>
+  <meta name="description" content="Explore a GORM graph model visually, build outgoing and incoming traversal paths, and inspect the matching GORM LINQ and SQL Server Graph query shape.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./graph-explorer.css">
+</head>
+<body class="explorer-body">
+<header class="topbar"><div class="topbar-inner wrap-wide">
+  <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Graph Explorer</small></a>
+  <nav class="top-links"><a href="./docs.html">Docs</a><a href="./examples.html">Examples</a><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+</div></header>
+
+<main class="explorer-shell wrap-wide">
+<section class="explorer-hero">
+  <div><div class="eyebrow">MODEL → PATH → QUERY</div><h1>Click the graph.<br><span>Build the traversal.</span></h1><p>Choose a root node, follow typed relationships in either direction, and see the equivalent GORM query and SQL Server Graph shape update immediately.</p></div>
+  <div class="explorer-note"><strong>Documentation model</strong><p>This explorer demonstrates documented graph-query semantics. It is intentionally a visual learning tool, not a database schema designer or production query planner.</p></div>
+</section>
+
+<section class="explorer-presets" aria-label="Graph path presets">
+  <span>TRY A PATH</span>
+  <button type="button" data-preset="gateway-database">Gateway → database</button>
+  <button type="button" data-preset="service-queue">Service → queue</button>
+  <button type="button" data-preset="database-dependents">Database ← dependents</button>
+  <button type="button" data-preset="queue-consumers">Queue ← consumers</button>
+</section>
+
+<section class="explorer-grid">
+  <div class="graph-panel">
+    <div class="explorer-panel-head"><div><span>GRAPH MODEL</span><strong>Service topology</strong></div><small>Click a node to start · click a highlighted edge to continue</small></div>
+    <div id="graph-canvas" class="graph-canvas" aria-label="Interactive graph model">
+      <svg id="graph-edges" class="graph-edges" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="false"></svg>
+      <div id="graph-nodes" class="graph-nodes"></div>
+    </div>
+    <div class="graph-legend"><span><i class="legend-node"></i>Node type</span><span><i class="legend-edge"></i>Typed edge</span><span><i class="legend-selectable"></i>Available next hop</span></div>
+  </div>
+
+  <aside class="path-panel">
+    <div class="explorer-panel-head"><div><span>CURRENT PATH</span><strong id="path-title">Choose a root node</strong></div><button id="reset-path" type="button" class="tiny-button">Reset</button></div>
+    <div id="path-flow" class="path-flow"><p>Select any node in the model to begin.</p></div>
+    <div id="current-node" class="current-node"></div>
+    <div class="path-actions"><button id="undo-hop" type="button" class="tiny-button" disabled>Undo hop</button><button id="copy-path" type="button" class="tiny-button" disabled>Copy path</button></div>
+  </aside>
+</section>
+
+<section class="query-output-grid">
+  <article class="query-output-panel">
+    <div class="explorer-panel-head"><div><span>GORM / C#</span><strong>Typed traversal</strong></div><div class="output-actions"><button id="copy-query" type="button" class="tiny-button" disabled>Copy</button><a id="open-playground" class="tiny-button disabled" href="./playground.html" aria-disabled="true">Open in playground</a></div></div>
+    <pre><code id="gorm-query">// Choose a root node to generate a traversal.</code></pre>
+  </article>
+  <article class="query-output-panel">
+    <div class="explorer-panel-head"><div><span>SQL SERVER GRAPH</span><strong>Expected query shape</strong></div><button id="copy-explorer-sql" type="button" class="tiny-button" disabled>Copy</button></div>
+    <pre><code id="graph-sql">-- Choose a root node to generate the SQL shape.</code></pre>
+  </article>
+</section>
+
+<section class="explorer-insights">
+  <article><span>WHY OUTGOING?</span><h2>Direction is part of the question.</h2><p>If the current node is the source of an edge, the explorer emits <code>Outgoing&lt;TEdge, TTarget&gt;()</code>. If it is the target, the same relationship becomes an incoming traversal.</p></article>
+  <article><span>WHY TYPE THE EDGE?</span><h2>The relationship carries domain meaning.</h2><p>GORM does not reduce the path to anonymous joins. <code>RoutesToEdge</code>, <code>DependsOnEdge</code> and other edge types remain visible in application code and SQL shape.</p></article>
+  <article><span>WHY INSPECT SQL?</span><h2>Graph intent should remain explainable.</h2><p>The generated shape shows which node and edge tables participate and how <code>MATCH</code> represents every hop. The production translator remains the authority once migrated.</p></article>
+</section>
+
+<section class="explorer-next">
+  <div><span>NEXT</span><h2>Take the generated query into the playground.</h2><p>The Graph Explorer teaches topology and direction. The Playground then lets you edit the LINQ, inspect parameters, translation stages and diagnostics.</p></div>
+  <a class="button" href="./playground.html">Open playground</a>
+</section>
+</main>
+
+<footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><a href="./docs.html">Documentation →</a></div></footer>
+<script src="./graph-explorer.js"></script>
+</body>
+</html>
