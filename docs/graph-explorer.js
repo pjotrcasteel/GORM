@@ -1,5 +1,6 @@
 (()=>{
   const storageKey='gorm.graphExplorer.model.v2';
+  const canvasStorageKey='gorm.graphExplorer.canvas.v1';
   const svgNs='http://www.w3.org/2000/svg';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const defaults={nodes:[
@@ -24,9 +25,10 @@
   const $=id=>document.getElementById(id);
   const identifier=/^[A-Za-z_][A-Za-z0-9_]*$/;
   let model=loadModel();
+  let canvasState=loadCanvasState();
 
   if(!$('graph-canvas')||!$('graph-edges')||!$('graph-nodes'))return;
-  const extraCss=document.createElement('link');extraCss.rel='stylesheet';extraCss.href='./graph-explorer-designer.css';document.head.appendChild(extraCss);
+  ['./graph-explorer-designer.css','./graph-explorer-canvas.css'].forEach(href=>{const link=document.createElement('link');link.rel='stylesheet';link.href=href;document.head.appendChild(link);});
 
   function isValid(value){
     if(!value||!Array.isArray(value.nodes)||!Array.isArray(value.edges)||!value.nodes.length)return false;
@@ -35,6 +37,8 @@
   }
   function loadModel(){try{const raw=localStorage.getItem(storageKey);const value=raw?JSON.parse(raw):null;return isValid(value)?value:clone(defaults);}catch{return clone(defaults);}}
   function saveModel(){try{localStorage.setItem(storageKey,JSON.stringify(model));}catch{}}
+  function loadCanvasState(){try{const raw=localStorage.getItem(canvasStorageKey);const value=raw?JSON.parse(raw):null;return{locked:Boolean(value?.locked)};}catch{return{locked:false};}}
+  function saveCanvasState(){try{localStorage.setItem(canvasStorageKey,JSON.stringify(canvasState));}catch{}}
   function node(id){return model.nodes.find(x=>x.id===id);}
   function edge(id){return model.edges.find(x=>x.id===id);}
   function current(){return state.hops.at(-1)?.to??state.root;}
@@ -49,24 +53,67 @@
   function resetPath(){state.root=null;state.hops=[];}
   function changed(text){saveModel();resetPath();renderDesigner();renderGraph();renderPath();renderOutput();status(`${text} Traversal path reset.`);}
 
-  function layout(){
-    if(model.nodes.length<=5&&model.nodes.every(x=>Number.isFinite(x.x)&&Number.isFinite(x.y)))return;
-    const columns=model.nodes.length<=4?2:model.nodes.length<=9?3:4,rows=Math.ceil(model.nodes.length/columns);
-    model.nodes.forEach((item,index)=>{const col=index%columns,row=Math.floor(index/columns);item.x=120+760*(col/Math.max(1,columns-1));item.y=95+370*(row/Math.max(1,rows-1));});
+  function gridSlots(){
+    const count=Math.max(1,model.nodes.length),columns=Math.min(5,Math.max(2,Math.ceil(Math.sqrt(count*1.45)))),rows=Math.ceil(count/columns),slots=[];
+    for(let row=0;row<rows;row++)for(let column=0;column<columns;column++)slots.push({x:120+760*(column/Math.max(1,columns-1)),y:95+370*(row/Math.max(1,rows-1))});
+    return slots;
+  }
+  function layout(force=false){
+    const missing=force?model.nodes:model.nodes.filter(x=>!Number.isFinite(x.x)||!Number.isFinite(x.y));if(!missing.length)return;
+    const slots=gridSlots();
+    if(force){model.nodes.forEach((item,index)=>Object.assign(item,slots[index]??slots.at(-1)));return;}
+    const occupied=model.nodes.filter(x=>!missing.includes(x)&&Number.isFinite(x.x)&&Number.isFinite(x.y)).map(x=>({x:x.x,y:x.y}));
+    missing.forEach(item=>{
+      const best=slots.reduce((winner,candidate)=>{
+        const score=occupied.length?Math.min(...occupied.map(point=>Math.hypot(point.x-candidate.x,point.y-candidate.y))):Infinity;
+        return !winner||score>winner.score?{candidate,score}:winner;
+      },null)?.candidate??{x:500,y:280};
+      item.x=best.x;item.y=best.y;occupied.push(best);
+    });
   }
   function svg(name,attrs={}){const element=document.createElementNS(svgNs,name);Object.entries(attrs).forEach(([key,value])=>element.setAttribute(key,String(value)));return element;}
   function marker(defs,id,color){const item=svg('marker',{id,viewBox:'0 0 10 10',refX:'8.5',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'});item.appendChild(svg('path',{d:'M 0 0 L 10 5 L 0 10 z',fill:color}));defs.appendChild(item);}
   function line(a,b,padding=82){const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1,ux=dx/length,uy=dy/length;return{x1:a.x+ux*padding,y1:a.y+uy*padding,x2:b.x-ux*padding,y2:b.y-uy*padding};}
-  function renderGraph(){
-    layout();const host=$('graph-nodes'),edges=$('graph-edges');host.textContent='';edges.textContent='';
+  function renderEdges(){
+    const edges=$('graph-edges');edges.textContent='';
     const defs=svg('defs');marker(defs,'arrow-default','#4a4552');marker(defs,'arrow-selectable','#b797ff');marker(defs,'arrow-selected','#9fe3d5');edges.appendChild(defs);
     model.edges.forEach(item=>{
-      const source=node(item.source),target=node(item.target);if(!source||!target)return;const points=line(source,target),group=svg('g',{class:'graph-edge-group','data-edge':item.id,tabindex:'0',role:'button'}),midX=(points.x1+points.x2)/2,midY=(points.y1+points.y2)/2,width=Math.max(116,item.type.length*7.3+24);
+      const source=node(item.source),target=node(item.target);if(!source||!target)return;const points=line(source,target),group=svg('g',{class:'graph-edge-group','data-edge':item.id,tabindex:'0',role:'button','aria-label':`${item.type}: ${source.type} to ${target.type}`}),midX=(points.x1+points.x2)/2,midY=(points.y1+points.y2)/2,width=Math.max(116,item.type.length*7.3+24);
       group.append(svg('line',{class:'graph-edge-hit',...points}),svg('line',{class:'graph-edge-line',...points,'marker-end':'url(#arrow-default)'}),svg('rect',{class:'graph-edge-label-bg',x:midX-width/2,y:midY-15,width,height:30,rx:10}));
       const label=svg('text',{class:'graph-edge-label',x:midX,y:midY});label.textContent=item.type;group.appendChild(label);group.addEventListener('click',()=>follow(item.id));group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();follow(item.id);}});edges.appendChild(group);
     });
-    model.nodes.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='graph-node-button';button.dataset.node=item.id;button.style.left=`${item.x/10}%`;button.style.top=`${item.y/5.6}%`;button.innerHTML=`<small></small><strong></strong>`;button.querySelector('small').textContent=item.type;button.querySelector('strong').textContent=item.label;button.addEventListener('click',()=>start(item.id));host.appendChild(button);});
-    updateGraphState();
+  }
+  function clamp(value,min,max){return Math.min(max,Math.max(min,value));}
+  function bindDrag(button,item){
+    let drag=null;
+    button.addEventListener('pointerdown',event=>{
+      if(canvasState.locked||event.button!==0)return;
+      drag={id:event.pointerId,startX:event.clientX,startY:event.clientY,x:item.x,y:item.y,moved:false};
+      button.setPointerCapture?.(event.pointerId);button.classList.add('dragging');
+    });
+    button.addEventListener('pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      const rect=$('graph-canvas').getBoundingClientRect();if(!rect.width||!rect.height)return;
+      const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY;if(Math.hypot(dx,dy)>3)drag.moved=true;
+      item.x=clamp(drag.x+dx*1000/rect.width,78,922);item.y=clamp(drag.y+dy*560/rect.height,54,506);
+      button.style.left=`${item.x/10}%`;button.style.top=`${item.y/5.6}%`;renderEdges();updateGraphState();event.preventDefault();
+    });
+    const finish=event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      try{button.releasePointerCapture?.(event.pointerId);}catch{}
+      button.classList.remove('dragging');
+      if(drag.moved){button.dataset.ignoreClick='true';saveModel();status(`${item.type} position saved.`);}
+      drag=null;
+    };
+    button.addEventListener('pointerup',finish);button.addEventListener('pointercancel',finish);
+  }
+  function renderGraph(){
+    layout();const host=$('graph-nodes');host.textContent='';renderEdges();
+    model.nodes.forEach(item=>{
+      const button=document.createElement('button');button.type='button';button.className='graph-node-button';button.dataset.node=item.id;button.style.left=`${item.x/10}%`;button.style.top=`${item.y/5.6}%`;button.innerHTML='<small></small><strong></strong>';button.querySelector('small').textContent=item.type;button.querySelector('strong').textContent=item.label;button.setAttribute('aria-label',`${item.label}, ${item.type}. Click to start traversal${canvasState.locked?'':', or drag to reposition'}.`);
+      bindDrag(button,item);button.addEventListener('click',()=>{if(button.dataset.ignoreClick==='true'){delete button.dataset.ignoreClick;return;}start(item.id);});host.appendChild(button);
+    });
+    applyCanvasState();updateGraphState();
   }
   function updateGraphState(){
     const selected=new Set(state.hops.map(x=>x.edge)),next=new Set(available().map(x=>x.id)),now=current();
@@ -79,6 +126,23 @@
   function applyPreset(key){
     const [root,...edges]=presets[key]??[];if(!node(root)||edges.some(id=>!edge(id))){status('This preset is not available in the custom model. Restore the demo model to use it.');return;}state.root=root;state.hops=[];edges.forEach(id=>{const item=edge(id),next=relation(item);if(next)state.hops.push({edge:id,direction:next.direction,to:next.to});});renderTraversal();
   }
+
+  function installCanvasControls(){
+    const head=document.querySelector('.graph-panel .explorer-panel-head');if(!head||$('auto-arrange'))return;
+    head.querySelector(':scope > small')?.remove();
+    const tools=document.createElement('div');tools.className='canvas-head-tools';
+    const hint=document.createElement('small');hint.className='canvas-hint';hint.textContent='Drag nodes to arrange · click to traverse';
+    const actions=document.createElement('div');actions.className='canvas-head-actions';
+    const arrange=document.createElement('button');arrange.id='auto-arrange';arrange.type='button';arrange.className='tiny-button canvas-control';arrange.textContent='Auto arrange';
+    const lock=document.createElement('button');lock.id='layout-lock';lock.type='button';lock.className='tiny-button canvas-control';lock.setAttribute('aria-pressed','false');
+    arrange.addEventListener('click',autoArrange);lock.addEventListener('click',toggleLayoutLock);actions.append(arrange,lock);tools.append(hint,actions);head.appendChild(tools);applyCanvasState();
+  }
+  function applyCanvasState(){
+    $('graph-canvas').classList.toggle('layout-locked',canvasState.locked);
+    const lock=$('layout-lock');if(!lock)return;lock.textContent=canvasState.locked?'Unlock layout':'Lock layout';lock.classList.toggle('active',canvasState.locked);lock.dataset.mode=canvasState.locked?'locked':'open';lock.setAttribute('aria-pressed',String(canvasState.locked));
+  }
+  function toggleLayoutLock(){canvasState.locked=!canvasState.locked;saveCanvasState();applyCanvasState();renderGraph();status(canvasState.locked?'Layout locked. Nodes remain clickable for traversal.':'Layout unlocked. Drag nodes to reposition them.');}
+  function autoArrange(){layout(true);saveModel();renderGraph();status('Layout auto-arranged and saved locally.');}
 
   function chip(host,kicker,value,className){const item=document.createElement('div');item.className=`path-chip ${className}`;const small=document.createElement('small'),strong=document.createElement('strong');small.textContent=kicker;strong.textContent=value;item.append(small,strong);host.appendChild(item);}
   function renderPath(){
@@ -119,6 +183,6 @@
   $('reset-path').addEventListener('click',()=>{resetPath();renderTraversal();});$('undo-hop').addEventListener('click',()=>{state.hops.pop();renderTraversal();});$('copy-path').addEventListener('click',event=>copy(event.currentTarget,pathText(),'Copy path'));$('copy-query').addEventListener('click',event=>copy(event.currentTarget,query(),'Copy'));$('copy-explorer-sql').addEventListener('click',event=>copy(event.currentTarget,sql(),'Copy'));
   $('new-node').addEventListener('click',()=>openNode());$('new-edge').addEventListener('click',()=>openEdge());$('restore-model').addEventListener('click',restore);$('cancel-node').addEventListener('click',()=>$('node-form').hidden=true);$('cancel-edge').addEventListener('click',()=>$('edge-form').hidden=true);$('delete-node').addEventListener('click',deleteNode);$('delete-edge').addEventListener('click',deleteEdge);$('node-form').addEventListener('submit',saveNode);$('edge-form').addEventListener('submit',saveEdge);
 
-  renderDesigner();renderGraph();
+  installCanvasControls();renderDesigner();renderGraph();
   try{if(localStorage.getItem(storageKey)){renderTraversal();status('Local model restored from this browser. Choose a root node to explore it.');}else applyPreset('gateway-database');}catch{applyPreset('gateway-database');}
 })();
