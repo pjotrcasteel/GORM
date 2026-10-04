@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Examples — Runnable graph query recipes</title>
+  <meta name="description" content="Browse practical GORM query examples and open each one directly in the interactive LINQ to SQL Server Graph playground.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
+</head>
+<body class="docs-body">
+<header class="topbar"><div class="topbar-inner wrap-wide">
+  <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Examples</small></a>
+  <div class="docs-search"><input id="docs-search" type="search" placeholder="Search GORM docs…" aria-label="Search GORM docs"><div id="global-search-results" class="global-search-results" hidden></div></div>
+  <nav class="top-links"><a href="./docs.html">Docs</a><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+</div></header>
+
+<div class="docs-shell wrap-wide">
+<aside class="docs-nav">
+  <div class="nav-group"><span>GET STARTED</span><a href="./docs.html">Overview</a><a href="./docs.html#get-started">Quickstart</a></div>
+  <div class="nav-group"><span>LEARN</span><a href="./concepts.html">Core concepts</a><a href="./querying.html">Querying</a><a href="./guides.html">Guides &amp; cookbook</a></div>
+  <div class="nav-group"><span>TOOLS</span><a class="active" href="./examples.html">Runnable examples</a><a href="./playground.html">LINQ → SQL playground</a><a href="./reference.html">API reference</a></div>
+</aside>
+
+<main class="docs-content">
+<section class="docs-hero"><div class="eyebrow">RUNNABLE EXAMPLES</div><h1>Start from code that already answers a graph question.</h1><p>Each example opens directly in the GORM playground. Change the query, inspect the graph anatomy and compare the resulting SQL Server Graph shape.</p><div class="docs-actions"><a class="button" href="./playground.html#outgoing">Run first example</a><a class="button ghost" href="./querying.html">Read querying docs</a></div></section>
+
+<section class="doc-section"><div class="doc-kicker">TRAVERSAL</div><h2>Connected-data queries</h2><div class="example-gallery">
+  <a class="example-card" href="./playground.html#outgoing"><span>ONE HOP · OUTGOING</span><h3>Find a person's projects</h3><pre><code>context.Set&lt;PersonNode&gt;()
+    .Where(x =&gt; x.Id == personId)
+    .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre><b>Run example →</b></a>
+  <a class="example-card" href="./playground.html#incoming"><span>ONE HOP · INCOMING</span><h3>Find database dependents</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == databaseId)
+    .Incoming&lt;DependsOnEdge, ServiceNode&gt;()</code></pre><b>Run example →</b></a>
+  <a class="example-card" href="./playground.html#chained"><span>TWO HOPS</span><h3>Follow a routed dependency</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.Id == gatewayId)
+    .Outgoing&lt;RoutesToEdge, ServiceNode&gt;()
+    .Outgoing&lt;DependsOnEdge, DatabaseNode&gt;()</code></pre><b>Run example →</b></a>
+</div></section>
+
+<section class="doc-section"><div class="doc-kicker">LINQ</div><h2>Filtering and result shaping</h2><div class="example-gallery">
+  <a class="example-card" href="./playground.html#filter"><span>FILTER + PAGE</span><h3>Page active services</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .Where(x =&gt; x.State == ServiceState.Active)
+    .OrderBy(x =&gt; x.Name)
+    .Skip(20)
+    .Take(25)</code></pre><b>Run example →</b></a>
+  <a class="example-card" href="./playground.html#temporal"><span>TEMPORAL</span><h3>Inspect an incident snapshot</h3><pre><code>context.Set&lt;ServiceNode&gt;()
+    .AsOf(incidentStartedAt)
+    .Where(x =&gt; x.Name == serviceName)</code></pre><b>Run example →</b></a>
+  <a class="example-card" href="./playground.html#include"><span>RELATED DATA</span><h3>Materialize a relationship</h3><pre><code>context.Set&lt;PersonNode&gt;()
+    .Include(x =&gt; x.Projects)
+    .SingleAsync(x =&gt; x.Id == personId)</code></pre><b>Run example →</b></a>
+</div></section>
+
+<section class="doc-section"><div class="doc-kicker">EXPERIMENT</div><h2>Turn any supported example into your own permalink</h2><p>The playground can now preserve the complete editor query in the URL. Start with a preset, modify it, press <strong>Share query</strong>, and the copied link reopens the exact query instead of only the original preset.</p><div class="callout"><strong>Useful for docs and issues</strong><span>A query permalink can be pasted into a bug report, PR discussion or documentation page without copying the SQL output separately.</span><a href="./playground.html">Open playground →</a></div></section>
+
+<nav class="doc-page-nav"><a href="./guides.html"><span>← PREVIOUS</span><strong>Guides &amp; cookbook</strong></a><a href="./playground.html"><span>NEXT →</span><strong>Interactive playground</strong></a></nav>
+</main>
+<aside class="toc"><span>ON THIS PAGE</span><a href="#">Traversal examples</a><a href="#">LINQ examples</a><a href="#">Permalinks</a></aside>
+</div>
+<script src="./script.js"></script>
+</body></html>
