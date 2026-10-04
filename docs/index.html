@@ -1,160 +1,46 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="author" content="Pjotr Casteel">
-  <title>GORM — model how things connect</title>
-  <meta name="description" content="GORM is a strongly typed graph ORM for SQL Server Graph with traversal, relationship-aware loading, temporal history, in-memory execution and graph analysis capabilities.">
-  <meta name="theme-color" content="#111018">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="GORM — model how things connect">
-  <meta property="og:description" content="Strongly typed graph persistence for .NET with SQL Server Graph, traversal, temporal history and in-memory execution.">
-  <meta property="og:url" content="https://pjotrcasteel.github.io/GORM/">
-  <meta property="og:image" content="https://pjotrcasteel.github.io/GORM/social-preview.svg">
-  <meta name="twitter:card" content="summary_large_image">
-  <link rel="canonical" href="https://pjotrcasteel.github.io/GORM/">
-  <link rel="icon" href="./logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="author" content="Pjotr Casteel">
+  <title>GORM — Graph ORM for .NET</title>
+  <meta name="description" content="GORM is a strongly typed graph ORM for .NET and SQL Server Graph. Learn the model, run examples and inspect LINQ-to-SQL translation.">
+  <meta name="theme-color" content="#111018"><meta property="og:type" content="website"><meta property="og:title" content="GORM — Model how things connect"><meta property="og:description" content="Documentation, runnable examples and an interactive LINQ-to-SQL playground for GORM."><meta property="og:url" content="https://pjotrcasteel.github.io/GORM/"><meta property="og:image" content="https://pjotrcasteel.github.io/GORM/social-preview.svg"><meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://pjotrcasteel.github.io/GORM/"><link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="graph-grid" aria-hidden="true"></div>
-  <header class="nav-shell">
-    <nav class="nav wrap">
-      <a class="brand" href="#top"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span></a>
-      <div class="nav-links"><a href="#why">Why GORM</a><a href="#lens">Graph lens</a><a href="#capabilities">Capabilities</a><a href="#boundary">Boundary</a></div>
-      <span class="preview-pill">SOURCE MIGRATION PENDING</span>
-    </nav>
-  </header>
+<div class="graph-grid" aria-hidden="true"></div>
+<header class="topbar"><div class="topbar-inner wrap-wide"><a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span></a><nav class="top-links" aria-label="Primary navigation"><a href="./docs.html">Docs</a><a href="./concepts.html">Concepts</a><a href="./querying.html">Querying</a><a href="./examples.html">Examples</a><a href="./playground.html">Playground</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav><a class="top-cta" href="./docs.html#get-started">Get started</a></div></header>
 
-  <main id="top">
-    <section class="hero wrap">
-      <div class="hero-copy reveal">
-        <div class="eyebrow">Graph persistence for .NET</div>
-        <h1>Model how things<br><span>connect.</span></h1>
-        <p class="lead">GORM brings strongly typed nodes, edges and traversals to SQL Server Graph, with the same model available in memory for fast tests and temporal inspection.</p>
-        <div class="hero-actions"><a class="button" href="#lens">Explore a graph</a><a class="button ghost" href="#start">See the API shape</a></div>
-        <div class="hero-note"><span>PC</span><small>AN OPEN-SOURCE PROJECT BY</small><strong>PjotrCasteel</strong></div>
-      </div>
-
-      <div class="hero-graph reveal delay-1" aria-label="Example service graph">
-        <svg viewBox="0 0 520 430" role="img" aria-label="Service graph with connected nodes">
-          <g class="edges">
-            <path d="M95 112 C165 112 163 190 235 190"/>
-            <path d="M286 190 C360 190 352 105 430 105"/>
-            <path d="M285 205 C365 205 355 292 435 292"/>
-            <path d="M95 112 C160 112 158 315 225 315"/>
-            <path d="M278 315 C345 315 355 292 435 292"/>
-          </g>
-          <g class="nodes">
-            <g transform="translate(50 82)"><circle r="34"/><text text-anchor="middle" y="5">web</text></g>
-            <g transform="translate(255 190)"><circle r="42"/><text text-anchor="middle" y="5">api</text></g>
-            <g transform="translate(445 105)"><circle r="37"/><text text-anchor="middle" y="5">auth</text></g>
-            <g transform="translate(450 292)"><circle r="40"/><text text-anchor="middle" y="5">db</text></g>
-            <g transform="translate(245 315)"><circle r="37"/><text text-anchor="middle" y="5">cache</text></g>
-          </g>
-        </svg>
-        <div class="graph-caption"><span>typed graph</span><i>→</i><span>traversal</span><i>→</i><span>persistence</span><i>→</i><span>history</span></div>
-      </div>
-    </section>
-
-    <section class="signal-strip"><div class="wrap signals"><span>SQL Server Graph</span><span>LINQ-style traversal</span><span>in-memory execution</span><span>temporal history</span><span>change tracking</span><span>graph intelligence</span></div></section>
-
-    <section id="why" class="section wrap">
-      <div class="section-head reveal"><div class="eyebrow">Why a graph ORM?</div><h2>Relationships are data, not an afterthought.</h2><p>Traditional persistence code often treats relationships as joins hidden behind repositories. GORM promotes nodes, edges and graph traversal to first-class concepts while keeping the API strongly typed.</p></div>
-      <div class="why-grid">
-        <article class="why-card reveal"><span>01</span><h3>Persist the topology</h3><p>Map nodes and edges explicitly. Track connects and disconnects alongside ordinary entity changes.</p></article>
-        <article class="why-card reveal delay-1"><span>02</span><h3>Query the relationship</h3><p>Use outgoing, incoming and chained traversals rather than rebuilding graph intent from ad-hoc joins.</p></article>
-        <article class="why-card reveal delay-2"><span>03</span><h3>Keep tests fast</h3><p>Use the same graph model with in-memory execution for unit tests and Reqnroll scenarios without a SQL dependency.</p></article>
-        <article class="why-card reveal delay-3"><span>04</span><h3>Inspect graph evolution</h3><p>Capture node and edge history, query a point in time, and reason about how connected state changed.</p></article>
-      </div>
-    </section>
-
-    <section id="lens" class="section lens-section">
-      <div class="wrap">
-        <div class="section-head reveal"><div class="eyebrow">Signature interaction · Graph Lens</div><h2>Look at the same graph through a different question.</h2><p>The graph stays the same. The intent changes: traverse it, rewind it, or reason about impact.</p></div>
-        <div class="lens reveal">
-          <div class="lens-tabs" role="tablist" aria-label="Graph view">
-            <button class="lens-tab active" data-mode="traverse" aria-selected="true">Traverse</button>
-            <button class="lens-tab" data-mode="history" aria-selected="false">AsOf</button>
-            <button class="lens-tab" data-mode="impact" aria-selected="false">Impact</button>
-          </div>
-          <div class="lens-stage">
-            <svg id="lens-graph" viewBox="0 0 640 350" aria-label="Interactive graph example">
-              <g class="lens-edges">
-                <path data-edge="web-api" d="M112 86 C190 86 190 170 282 170"/>
-                <path data-edge="api-auth" d="M328 158 C410 124 430 82 522 82"/>
-                <path data-edge="api-db" d="M330 188 C410 220 430 272 526 272"/>
-                <path data-edge="web-cache" d="M110 100 C185 150 175 278 275 278"/>
-                <path data-edge="cache-db" d="M320 278 C390 278 442 272 526 272"/>
-              </g>
-              <g class="lens-nodes">
-                <g data-node="web" transform="translate(78 82)"><circle r="34"/><text y="5" text-anchor="middle">web</text></g>
-                <g data-node="api" transform="translate(305 175)"><circle r="43"/><text y="5" text-anchor="middle">api</text></g>
-                <g data-node="auth" transform="translate(548 82)"><circle r="37"/><text y="5" text-anchor="middle">auth</text></g>
-                <g data-node="db" transform="translate(552 272)"><circle r="40"/><text y="5" text-anchor="middle">db</text></g>
-                <g data-node="cache" transform="translate(297 278)"><circle r="38"/><text y="5" text-anchor="middle">cache</text></g>
-              </g>
-            </svg>
-            <div class="lens-explanation"><span id="lens-label">OUTGOING TRAVERSAL</span><h3 id="lens-title">Follow dependencies from the API.</h3><p id="lens-copy">Outgoing and chained traversal make relationship intent part of the query instead of hiding it in join plumbing.</p></div>
-          </div>
-          <pre class="code-panel"><code id="lens-code">var dependencies = await context.Set&lt;ServiceNode&gt;()
-    .Where(x =&gt; x.Name == "api")
-    .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
-    .ToListAsync();</code></pre>
-        </div>
-      </div>
-    </section>
-
-    <section id="start" class="section wrap">
-      <div class="section-head reveal"><div class="eyebrow">The core API shape</div><h2>Nodes and edges stay ordinary CLR types.</h2></div>
-      <div class="code-grid reveal">
-        <pre><code>public sealed class PersonNode : Node
-{
-    public string Name { get; set; } = string.Empty;
-    public List&lt;ProjectNode&gt; Projects { get; set; } = [];
-}
-
-public sealed class WorksOnEdge : Edge
-{
-    public bool IsPrimary { get; set; }
-}</code></pre>
-        <pre><code>var projects = await context.Set&lt;PersonNode&gt;()
+<main>
+<section class="hero-home wrap-wide">
+  <div class="hero-copy reveal"><div class="eyebrow">Graph ORM for .NET + SQL Server Graph</div><h1>Model how things <span>connect.</span></h1><p class="hero-lead">GORM makes nodes, edges and traversals first-class .NET concepts. Query connected data with a strongly typed API, inspect the SQL shape, test the same model in memory and reason about graph history over time.</p><div class="hero-actions"><a class="button" href="./docs.html#get-started">Build your first graph</a><a class="button ghost" href="./examples.html">Run examples</a></div><div class="hero-meta"><span>SQL Server Graph</span><span>LINQ-style traversal</span><span>Temporal graph</span><span>In-memory tests</span></div></div>
+  <div class="query-demo reveal delay-1"><div class="demo-toolbar"><span></span><span></span><span></span><strong>Query.cs</strong></div><pre><code><span class="kw">var</span> projects = <span class="kw">await</span> context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
     .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()
-    .ToListAsync();
+    .ToListAsync();</code></pre><div class="demo-arrow">LINQ <span>→</span> GRAPH INTENT <span>→</span> SQL</div><pre class="sql-preview"><code><span class="kw">SELECT</span> target.*
+<span class="kw">FROM</span> PersonNode source,
+     WorksOnEdge edge,
+     ProjectNode target
+<span class="kw">WHERE MATCH</span>(source-(edge)-&gt;target)
+  <span class="kw">AND</span> source.Id = @personId;</code></pre><a class="demo-link" href="./playground.html#outgoing">Inspect this query in the playground →</a></div>
+</section>
 
-var person = await context.Set&lt;PersonNode&gt;()
-    .Include(x =&gt; x.Projects)
-    .SingleAsync();</code></pre>
-      </div>
-      <div class="preview-warning reveal"><b>Source migration is intentionally separate.</b><span>The public GORM product surface can exist before the implementation source is migrated. NuGet remains unpublished until the source, naming, tests and package metadata are validated.</span></div>
-    </section>
+<section class="signal-strip"><div class="wrap-wide signals"><span>Strongly typed nodes &amp; edges</span><span>Outgoing / incoming traversal</span><span>Runnable docs</span><span>Shareable query inspector</span><span>Point-in-time graph queries</span></div></section>
 
-    <section id="capabilities" class="section capabilities-section">
-      <div class="wrap">
-        <div class="section-head reveal"><div class="eyebrow">Beyond core persistence</div><h2>The graph becomes a runtime model you can inspect.</h2><p>The current implementation already extends beyond CRUD. The public surface keeps those capabilities subordinate to the core ORM instead of presenting five unrelated products.</p></div>
-        <div class="capability-grid">
-          <article class="capability reveal"><span>CORE</span><h3>Graph ORM</h3><p>Typed model configuration, node/edge sets, traversal, includes, change tracking and graph mutations.</p></article>
-          <article class="capability reveal"><span>TIME</span><h3>Temporal graph</h3><p>History capture plus <code>AsOf</code>, <code>Current</code> and range queries for point-in-time graph inspection.</p></article>
-          <article class="capability reveal"><span>ANALYSIS</span><h3>Graph intelligence</h3><p>Centrality, routing, components, communities, impact and versioned projections over ordinary GORM entities.</p></article>
-          <article class="capability reveal"><span>SIMULATION</span><h3>Digital twin</h3><p>Isolated graph scenarios for drift, outage rehearsal and reproducible risk analysis without implicit persistence.</p></article>
-          <article class="capability reveal"><span>GROUNDING</span><h3>Explainable GraphRAG</h3><p>Path-aware evidence and graph-scoped citations with security boundaries kept explicit.</p></article>
-          <article class="capability reveal"><span>QUERY</span><h3>Helix</h3><p>Query analysis, generated SQL inspection, safe rewrites and strict policy for graph-query execution.</p></article>
-          <article class="capability reveal"><span>WRITE PLAN</span><h3>ChangeSet compiler</h3><p>Preview graph writes as an ordered plan, preserve rollback semantics and explain concurrency conflicts.</p></article>
-        </div>
-      </div>
-    </section>
+<section class="section-home wrap-wide"><div class="section-heading reveal"><div class="eyebrow">Learn GORM</div><h2>Documentation that starts with the job you are trying to do.</h2><p>Start small, then move from the graph model into traversal, runnable examples, query translation, history and testing.</p></div><div class="learning-grid">
+  <a class="learn-card reveal" href="./docs.html#get-started"><span>01 · QUICKSTART</span><h3>Build your first graph</h3><p>Define a node and edge and run the first typed traversal.</p><b>Start here →</b></a>
+  <a class="learn-card reveal delay-1" href="./concepts.html"><span>02 · CONCEPTS</span><h3>Understand the graph model</h3><p>Nodes, edges, identity, relationship direction and the persistence boundary.</p><b>Read concepts →</b></a>
+  <a class="learn-card reveal delay-2" href="./examples.html"><span>03 · EXAMPLES</span><h3>Run before you read everything</h3><p>Open focused traversal, paging, temporal and Include examples directly in the inspector.</p><b>Browse examples →</b></a>
+  <a class="learn-card reveal delay-3" href="./playground.html"><span>04 · PLAYGROUND</span><h3>Inspect what GORM sees</h3><p>Edit LINQ and inspect graph anatomy, parameters, translation stages and SQL shape.</p><b>Open playground →</b></a>
+</div></section>
 
-    <section id="boundary" class="section wrap">
-      <div class="boundary-panel reveal">
-        <div><div class="eyebrow">Boundary</div><h2>GORM owns graph persistence mechanics—not your domain policy.</h2><p>Analysis, previews and simulations remain read-only until the application explicitly chooses a mutation or save operation. In-memory execution exists for deterministic tests, not as a claim that SQL Server behavior is irrelevant.</p></div>
-        <div class="boundary-list"><span>maps graph state</span><span>translates graph queries</span><span>tracks graph changes</span><span>captures graph history</span><i>does not own business decisions</i></div>
-      </div>
-    </section>
-  </main>
+<section class="section-home alt-section"><div class="wrap-wide feature-split"><div class="section-heading reveal"><div class="eyebrow">A graph-first persistence model</div><h2>Relationships stop being hidden join plumbing.</h2><p>GORM promotes graph intent into the API: traverse relationships directly when the path matters, or load navigation properties when the object graph is the more useful result shape.</p></div><div class="feature-stack reveal delay-1"><div><span>TRAVERSE</span><strong>Outgoing&lt;TEdge, TTarget&gt;()</strong><p>Move from one typed node set to another through an explicit edge type.</p></div><div><span>LOAD</span><strong>Include(...) / ThenInclude(...)</strong><p>Materialize related graph state when you want a connected object graph.</p></div><div><span>TIME</span><strong>AsOf(...) / Current()</strong><p>Inspect connected state at a moment in time instead of only current rows.</p></div><div><span>TEST</span><strong>In-memory execution</strong><p>Use the same graph model in fast deterministic tests while keeping provider integration tests explicit.</p></div></div></div></section>
 
-  <footer class="footer wrap"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><span class="signature-mark">PC</span> PjotrCasteel · source migration pending</div></footer>
-  <script src="./script.js"></script>
-</body>
-</html>
+<section class="section-home wrap-wide"><div class="section-heading reveal"><div class="eyebrow">Beyond CRUD</div><h2>A graph becomes something you can inspect and reason about.</h2></div><div class="capability-grid"><article class="capability reveal"><span>CORE</span><h3>Graph persistence</h3><p>Typed model configuration, node/edge sets, traversal, includes, change tracking and graph mutations.</p></article><article class="capability reveal"><span>TIME</span><h3>Temporal graph</h3><p>Node and edge history for current and point-in-time graph inspection.</p></article><article class="capability reveal"><span>ANALYSIS</span><h3>Graph intelligence</h3><p>Centrality, routing, components, communities, impact and versioned projections.</p></article><article class="capability reveal"><span>QUERY</span><h3>Helix</h3><p>Query analysis, generated SQL inspection and semantics-preserving graph-query optimization.</p></article></div></section>
+
+<section class="section-home wrap-wide"><div class="docs-cta reveal"><div><div class="eyebrow">Ready to go deeper?</div><h2>Use the docs like a framework manual — or start by running code.</h2><p>Move from a runnable query to concepts, traversal, temporal behavior and advanced capabilities without hunting through one long landing page.</p></div><div class="hero-actions"><a class="button" href="./docs.html">Browse documentation</a><a class="button ghost" href="./examples.html">Run examples</a></div></div></section>
+</main>
+
+<footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><span class="signature-mark">PC</span> PjotrCasteel · open source</div></footer>
+<script src="./script.js"></script>
+</body></html>

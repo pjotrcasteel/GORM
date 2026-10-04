@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Playground — LINQ to SQL Server Graph</title>
+  <meta name="description" content="Explore GORM LINQ query shapes, graph traversal anatomy, diagnostics and SQL Server Graph translation side by side.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./playground-runtime.css">
+</head>
+<body class="playground-body">
+<header class="topbar"><div class="topbar-inner wrap-wide">
+  <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Playground</small></a>
+  <nav class="top-links"><a href="./docs.html">Docs</a><a href="./examples.html">Examples</a><a href="./querying.html">Querying</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+  <span class="preview-pill">DOCS PREVIEW TRANSLATOR</span>
+</div></header>
+
+<main class="playground-shell wrap-wide">
+<section class="playground-intro">
+  <div><div class="eyebrow">LINQ → GRAPH INTENT → SQL</div><h1>Change the query.<br><span>See what GORM sees.</span></h1><p>Edit a focused GORM query and inspect four views at once: C# intent, graph/query anatomy, translation diagnostics and the resulting SQL Server Graph shape.</p></div>
+  <div class="preview-note"><strong>Documentation preview</strong><p>The implementation source has not been migrated into this public repository yet. The playground now runs through a translator contract so the preview engine can later be replaced by the real GORM runtime without rebuilding the UI.</p></div>
+</section>
+
+<section class="runtime-status-grid" aria-label="Translator status">
+  <article id="engine-status" class="runtime-card engine-status">
+    <span>TRANSLATOR ENGINE</span><h2 id="engine-name">Resolving translator…</h2>
+    <div class="engine-meta"><div><small>VERSION</small><strong id="engine-version">—</strong></div><div><small>EXECUTION</small><strong id="engine-execution">—</strong></div><div><small>AUTHORITY</small><strong id="engine-authority">—</strong></div></div>
+  </article>
+  <article class="runtime-card">
+    <span>DOCUMENTATION CONTRACTS</span><h2 id="contract-summary">Checking examples…</h2>
+    <div id="contract-results" class="contract-results"></div>
+  </article>
+</section>
+
+<div class="playground-toolbar">
+  <section class="preset-row" aria-label="Playground examples">
+    <button class="preset active" data-example="outgoing">Outgoing traversal</button>
+    <button class="preset" data-example="incoming">Incoming traversal</button>
+    <button class="preset" data-example="chained">Two-hop traversal</button>
+    <button class="preset" data-example="filter">Filter + paging</button>
+    <button class="preset" data-example="temporal">AsOf snapshot</button>
+    <button class="preset" data-example="include">Include relationship</button>
+  </section>
+  <div class="playground-actions"><a class="tiny-button" href="./examples.html">Browse examples</a><button id="share-query" class="tiny-button">Share query</button></div>
+</div>
+
+<section class="editor-grid">
+  <div class="editor-panel">
+    <div class="panel-head"><div><span>C# / GORM</span><strong>Query.cs</strong></div><div class="panel-actions"><button id="restore-query" class="tiny-button" hidden>Restore draft</button><button id="reset-query" class="tiny-button">Reset</button></div></div>
+    <textarea id="query-editor" spellcheck="false" aria-label="GORM query editor"></textarea>
+    <div class="editor-status"><span id="query-status">Ready</span><button id="run-query" class="run-button">Analyze query <kbd>Ctrl ↵</kbd></button></div>
+  </div>
+  <div class="editor-panel output-panel">
+    <div class="panel-head"><div><span>SQL SERVER GRAPH</span><strong>Generated SQL shape</strong></div><button id="copy-sql" class="tiny-button">Copy</button></div>
+    <pre id="sql-output" class="sql-output"><code></code></pre>
+    <div id="translation-notes" class="translation-notes"></div>
+  </div>
+</section>
+
+<section class="playground-anatomy" aria-label="Query anatomy">
+  <div class="anatomy-head"><div><span>QUERY ANATOMY</span><strong>How the expression is interpreted</strong></div><small id="anatomy-summary">Waiting for query</small></div>
+  <div id="anatomy-flow" class="anatomy-flow"></div>
+  <div id="graph-preview" class="graph-preview"></div>
+  <div id="playground-metrics" class="playground-metrics"></div>
+</section>
+
+<section class="inspector-grid">
+  <article class="inspector-panel"><div class="inspector-head"><span>TRANSLATION PIPELINE</span><strong>From expression to provider shape</strong></div><div id="translation-pipeline" class="translation-pipeline"></div></article>
+  <article class="inspector-panel"><div class="inspector-head"><span>PARAMETERS &amp; DIAGNOSTICS</span><strong>What should be bound or reviewed</strong></div><div id="query-diagnostics" class="query-diagnostics"></div></article>
+</section>
+
+<section class="playground-details">
+  <article><span>WHY THIS MATTERS</span><h2>Graph intent should be inspectable.</h2><p>The query anatomy separates node roots, scalar predicates, traversal direction, edge types, targets, temporal context and limits. The inspector then shows which translation stages and parameters are involved.</p></article>
+  <article><span>SHARE EXACT REPRODUCTIONS</span><h2>Every custom query can become a permalink.</h2><p>Use <strong>Share query</strong> to encode the editor state in the URL. That makes examples usable in docs, issues and PR discussions without pretending the generated SQL is an authoritative runtime result.</p></article>
+</section>
+
+<section class="runtime-contract">
+  <span>RUNTIME INTEGRATION CONTRACT</span><h2>The UI no longer depends on a specific translator implementation.</h2>
+  <p>A future GORM runtime adapter only needs metadata plus an async-compatible <code>translate(query)</code> function. The adapter validates the returned shape before the playground renders it, while the example contracts continuously verify the documented behavior.</p>
+  <pre><code>window.GormPlaygroundEngine = {
+    metadata: {
+        id: "gorm-runtime",
+        label: "GORM runtime",
+        version: "1.0.0",
+        authoritative: true,
+        execution: "sandboxed .NET"
+    },
+    translate: async query =&gt; ({ ok, sql, notes, model })
+};</code></pre>
+</section>
+
+<section class="support-matrix">
+  <div class="section-heading"><div class="eyebrow">SUPPORTED IN THIS PREVIEW</div><h2>Useful patterns, explicit limits.</h2></div>
+  <div class="matrix-grid"><div><strong>Node root</strong><span>Set&lt;TNode&gt;()</span></div><div><strong>Predicates</strong><span>Where(Id / Name / State / Region)</span></div><div><strong>Traversal</strong><span>Outgoing / Incoming / chained hops</span></div><div><strong>Ordering &amp; limits</strong><span>OrderBy, Skip, Take</span></div><div><strong>Temporal</strong><span>AsOf(...)</span></div><div><strong>Relationship load</strong><span>Include(...)</span></div></div>
+</section>
+</main>
+<footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><a href="./examples.html">Runnable examples →</a></div></footer>
+<script src="./playground-preview-engine.js"></script>
+<script src="./playground-adapter.js"></script>
+<script src="./playground-contracts.js"></script>
+<script src="./script.js"></script>
+<script src="./playground-runtime.js"></script>
+</body></html>
