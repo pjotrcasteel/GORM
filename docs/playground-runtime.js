@@ -152,21 +152,28 @@
     if(status)status.textContent=result.ok?`${engine.metadata.label} refreshed`:'Translator needs a supported GORM query root';
   }
 
+  function publishRun(query,ok,error=null){
+    document.dispatchEvent(new CustomEvent('gorm:playground-ran',{detail:{query,ok,engine:engine.metadata.id,error:error?String(error):null}}));
+  }
+
   async function runEngine(){
     const editor=document.getElementById('query-editor');
     if(!editor)return;
     const version=++runVersion;
+    const query=editor.value;
     const status=document.getElementById('query-status');
     if(status)status.textContent=`Running ${engine.metadata.label}…`;
     try{
-      const result=await adapter.translate(engine,editor.value);
+      const result=await adapter.translate(engine,query);
       if(version!==runVersion)return;
       renderResult(result);
+      publishRun(query,result.ok);
     }catch(error){
       if(version!==runVersion)return;
       if(status)status.textContent='Translator contract failed';
       const output=document.querySelector('#sql-output code');
       if(output)output.textContent=`-- ${error instanceof Error?error.message:String(error)}`;
+      publishRun(query,false,error instanceof Error?error.message:String(error));
     }
   }
 
