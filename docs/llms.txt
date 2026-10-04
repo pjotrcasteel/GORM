@@ -13,6 +13,7 @@ Canonical repository: https://github.com/pjotrcasteel/GORM
 - Core concepts: https://pjotrcasteel.github.io/GORM/concepts.html
 - Querying and traversal: https://pjotrcasteel.github.io/GORM/querying.html
 - Guides and cookbook: https://pjotrcasteel.github.io/GORM/guides.html
+- Runnable examples: https://pjotrcasteel.github.io/GORM/examples.html
 - Advanced graph capabilities: https://pjotrcasteel.github.io/GORM/advanced.html
 - API reference: https://pjotrcasteel.github.io/GORM/reference.html
 - Interactive LINQ to SQL playground: https://pjotrcasteel.github.io/GORM/playground.html
@@ -31,6 +32,12 @@ Key documented query operations include:
 - AsOf(...), Current() and temporal range operations
 - async materialization such as ToListAsync(), SingleAsync() and CountAsync()
 
+## Runnable documentation
+
+GORM query code blocks in the documentation can open directly in the playground. The runnable examples catalog provides focused traversal, paging, temporal and relationship-loading scenarios.
+
+The playground supports shareable custom-query permalinks. A permalink preserves the editor query so it can be used in documentation, issue reports and pull request discussions. It does not imply that the generated SQL is authoritative runtime output while the real translator is still pending source migration.
+
 ## Advanced capabilities
 
 Implementation materials also describe deeper capabilities over the same GORM graph runtime:
@@ -44,7 +51,7 @@ These are documented as capabilities, not as guaranteed public signatures. Exact
 
 ## Playground status
 
-The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy and expected SQL Server Graph concepts but must not be treated as the production translator. After source migration, it should be wired to or continuously verified against the real translator.
+The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy, translation stages, bind parameters, diagnostics and expected SQL Server Graph concepts but must not be treated as the production translator. After source migration, it should be wired to or continuously verified against the real translator.
 
 ## Repository status
 
