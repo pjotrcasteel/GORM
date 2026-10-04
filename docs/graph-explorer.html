@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GORM Graph Explorer — Build typed traversal paths visually</title>
-  <meta name="description" content="Explore a GORM graph model visually, build outgoing and incoming traversal paths, and inspect the matching GORM LINQ and SQL Server Graph query shape.">
+  <title>GORM Graph Explorer — Build and design typed graph models visually</title>
+  <meta name="description" content="Design a GORM graph model visually, build outgoing and incoming traversal paths, and inspect the matching GORM LINQ and SQL Server Graph query shape.">
   <link rel="icon" href="./logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./graph-explorer.css">
@@ -17,8 +17,8 @@
 
 <main class="explorer-shell wrap-wide">
 <section class="explorer-hero">
-  <div><div class="eyebrow">MODEL → PATH → QUERY</div><h1>Click the graph.<br><span>Build the traversal.</span></h1><p>Choose a root node, follow typed relationships in either direction, and see the equivalent GORM query and SQL Server Graph shape update immediately.</p></div>
-  <div class="explorer-note"><strong>Documentation model</strong><p>This explorer demonstrates documented graph-query semantics. It is intentionally a visual learning tool, not a database schema designer or production query planner.</p></div>
+  <div><div class="eyebrow">MODEL → PATH → QUERY</div><h1>Design the graph.<br><span>Build the traversal.</span></h1><p>Add or edit typed nodes and edges, choose a root, follow relationships in either direction, and see the equivalent GORM query and SQL Server Graph shape update immediately.</p></div>
+  <div class="explorer-note"><strong>Documentation model</strong><p>This explorer teaches graph-model and query semantics. Custom models are kept locally in your browser; it is not a production schema migration tool or authoritative runtime query planner.</p></div>
 </section>
 
 <section class="explorer-presets" aria-label="Graph path presets">
@@ -29,9 +29,43 @@
   <button type="button" data-preset="queue-consumers">Queue ← consumers</button>
 </section>
 
+<section class="designer-shell" id="model-designer">
+  <div class="designer-heading"><div><span>MODEL DESIGNER</span><h2>Change the topology without changing code.</h2><p>Create or edit node and edge types here. The graph, path builder, GORM query and SQL preview all consume the same in-browser model.</p></div><div class="designer-heading-actions"><button id="new-node" type="button" class="tiny-button">+ Node</button><button id="new-edge" type="button" class="tiny-button">+ Edge</button><button id="restore-model" type="button" class="tiny-button">Restore demo model</button></div></div>
+  <div class="designer-grid">
+    <article class="designer-panel">
+      <div class="explorer-panel-head"><div><span>NODES</span><strong>Node types</strong></div><small id="node-count">0 nodes</small></div>
+      <div id="node-list" class="model-list"></div>
+      <form id="node-form" class="designer-form" hidden>
+        <div class="form-heading"><strong id="node-form-title">Add node</strong><button id="cancel-node" type="button" class="text-button">Cancel</button></div>
+        <input id="node-id" type="hidden">
+        <label><span>CLR type</span><input id="node-type" required maxlength="80" placeholder="CacheNode"></label>
+        <label><span>Display label</span><input id="node-label" required maxlength="80" placeholder="Distributed Cache"></label>
+        <label><span>Id variable</span><input id="node-variable" required maxlength="80" placeholder="cacheId"></label>
+        <label class="form-wide"><span>Description</span><textarea id="node-description" maxlength="280" rows="3" placeholder="What this node represents in the example domain."></textarea></label>
+        <div class="form-actions form-wide"><button type="submit" class="tiny-button primary">Save node</button><button id="delete-node" type="button" class="tiny-button danger" hidden>Delete node</button></div>
+      </form>
+    </article>
+
+    <article class="designer-panel">
+      <div class="explorer-panel-head"><div><span>EDGES</span><strong>Typed relationships</strong></div><small id="edge-count">0 edges</small></div>
+      <div id="edge-list" class="model-list"></div>
+      <form id="edge-form" class="designer-form" hidden>
+        <div class="form-heading"><strong id="edge-form-title">Add edge</strong><button id="cancel-edge" type="button" class="text-button">Cancel</button></div>
+        <input id="edge-id" type="hidden">
+        <label><span>CLR type</span><input id="edge-type" required maxlength="80" placeholder="CachesInEdge"></label>
+        <label><span>Display label</span><input id="edge-label" required maxlength="80" placeholder="caches in"></label>
+        <label><span>Source node</span><select id="edge-source" required></select></label>
+        <label><span>Target node</span><select id="edge-target" required></select></label>
+        <div class="form-actions form-wide"><button type="submit" class="tiny-button primary">Save edge</button><button id="delete-edge" type="button" class="tiny-button danger" hidden>Delete edge</button></div>
+      </form>
+    </article>
+  </div>
+  <div id="designer-status" class="designer-status" role="status" aria-live="polite">Demo model loaded. Changes are saved locally in this browser.</div>
+</section>
+
 <section class="explorer-grid">
   <div class="graph-panel">
-    <div class="explorer-panel-head"><div><span>GRAPH MODEL</span><strong>Service topology</strong></div><small>Click a node to start · click a highlighted edge to continue</small></div>
+    <div class="explorer-panel-head"><div><span>GRAPH MODEL</span><strong>Current topology</strong></div><small>Click a node to start · click a highlighted edge to continue</small></div>
     <div id="graph-canvas" class="graph-canvas" aria-label="Interactive graph model">
       <svg id="graph-edges" class="graph-edges" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="false"></svg>
       <div id="graph-nodes" class="graph-nodes"></div>
@@ -60,8 +94,8 @@
 
 <section class="explorer-insights">
   <article><span>WHY OUTGOING?</span><h2>Direction is part of the question.</h2><p>If the current node is the source of an edge, the explorer emits <code>Outgoing&lt;TEdge, TTarget&gt;()</code>. If it is the target, the same relationship becomes an incoming traversal.</p></article>
-  <article><span>WHY TYPE THE EDGE?</span><h2>The relationship carries domain meaning.</h2><p>GORM does not reduce the path to anonymous joins. <code>RoutesToEdge</code>, <code>DependsOnEdge</code> and other edge types remain visible in application code and SQL shape.</p></article>
-  <article><span>WHY INSPECT SQL?</span><h2>Graph intent should remain explainable.</h2><p>The generated shape shows which node and edge tables participate and how <code>MATCH</code> represents every hop. The production translator remains the authority once migrated.</p></article>
+  <article><span>WHY TYPE THE EDGE?</span><h2>The relationship carries domain meaning.</h2><p>GORM does not reduce the path to anonymous joins. Your own edge types remain visible in application code and in the SQL Server Graph query shape.</p></article>
+  <article><span>WHY DESIGN HERE?</span><h2>One model drives every view.</h2><p>The designer, topology canvas, traversal builder and query outputs all consume the same model. Editing topology therefore immediately changes the questions you can ask.</p></article>
 </section>
 
 <section class="explorer-next">
