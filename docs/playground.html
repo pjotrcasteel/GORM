@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GORM Playground — LINQ to SQL Server Graph</title>
+  <meta name="description" content="Explore GORM LINQ query shapes and inspect the SQL Server Graph translation side by side.">
+  <link rel="icon" href="./logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="playground-body">
+  <header class="topbar">
+    <div class="topbar-inner wrap-wide">
+      <a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Playground</small></a>
+      <nav class="top-links"><a href="./docs.html">Docs</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav>
+      <span class="preview-pill">DOCS PREVIEW TRANSLATOR</span>
+    </div>
+  </header>
+
+  <main class="playground-shell wrap-wide">
+    <section class="playground-intro">
+      <div><div class="eyebrow">LINQ → SQL SERVER GRAPH</div><h1>Change the query.<br><span>See the SQL shape.</span></h1><p>Edit a focused GORM query and inspect how its graph intent maps to SQL Server Graph concepts. Use the presets to explore traversal, filtering, temporal queries and relationship loading.</p></div>
+      <div class="preview-note"><strong>Documentation preview</strong><p>The public repository does not contain the migrated GORM query translator yet. This playground is deliberately a transparent browser-side documentation translator for supported examples — not a claim that JavaScript is executing GORM.</p></div>
+    </section>
+
+    <section class="preset-row" aria-label="Playground examples">
+      <button class="preset active" data-example="outgoing">Outgoing traversal</button>
+      <button class="preset" data-example="incoming">Incoming traversal</button>
+      <button class="preset" data-example="filter">Filter + paging</button>
+      <button class="preset" data-example="temporal">AsOf snapshot</button>
+      <button class="preset" data-example="include">Include relationship</button>
+    </section>
+
+    <section class="editor-grid">
+      <div class="editor-panel">
+        <div class="panel-head"><div><span>C# / GORM</span><strong>Query.cs</strong></div><button id="reset-query" class="tiny-button">Reset</button></div>
+        <textarea id="query-editor" spellcheck="false" aria-label="GORM query editor"></textarea>
+        <div class="editor-status"><span id="query-status">Ready</span><button id="run-query" class="run-button">Generate SQL <kbd>Ctrl ↵</kbd></button></div>
+      </div>
+
+      <div class="editor-panel output-panel">
+        <div class="panel-head"><div><span>SQL SERVER GRAPH</span><strong>Generated SQL</strong></div><button id="copy-sql" class="tiny-button">Copy</button></div>
+        <pre id="sql-output" class="sql-output"><code></code></pre>
+        <div id="translation-notes" class="translation-notes"></div>
+      </div>
+    </section>
+
+    <section class="playground-details">
+      <article><span>WHAT THIS TEACHES</span><h2>Make graph intent visible.</h2><p>The left side is application intent: node root, predicates, direction and edge type. The right side exposes the persistence concepts beneath it: source and target tables, edge table, <code>MATCH</code>, predicates and temporal clauses.</p></article>
+      <article><span>WHERE THIS GOES NEXT</span><h2>Replace preview translation with GORM itself.</h2><p>After the source migration, the ideal playground path is a small sandboxed .NET/WASM or server-backed compiler endpoint that uses the actual GORM expression visitor and SQL generator. Then the documentation examples become executable contract tests against the real translator.</p></article>
+    </section>
+
+    <section class="support-matrix">
+      <div class="section-heading"><div class="eyebrow">SUPPORTED IN THIS PREVIEW</div><h2>Focused patterns, not fake completeness.</h2></div>
+      <div class="matrix-grid"><div><strong>Node root</strong><span>Set&lt;TNode&gt;()</span></div><div><strong>Predicates</strong><span>Where(... Id / Name / State ...)</span></div><div><strong>Traversal</strong><span>Outgoing / Incoming</span></div><div><strong>Paging</strong><span>Take(...)</span></div><div><strong>Temporal</strong><span>AsOf(...)</span></div><div><strong>Relationship load</strong><span>Include(...)</span></div></div>
+    </section>
+  </main>
+
+  <footer class="footer wrap-wide"><div class="brand"><img src="./logo.svg" width="25" height="25" alt=""><span>GORM</span></div><p>Model how things connect.</p><div><a href="./docs.html">Documentation →</a></div></footer>
+  <script src="./script.js"></script>
+</body>
+</html>
