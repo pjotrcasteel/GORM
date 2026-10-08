@@ -25,6 +25,9 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 - Verifies nested transactions roll back to SQL Server savepoints without discarding outer writes
 - Verifies explicit named savepoint rollback with additional writes after rollback
 - Verifies optimistic concurrency on a dedicated versioned SQL Graph table using independent contexts: stale update/delete and sequential version increments
+- Reads SQL Server node history across deterministic create/update/delete capture times using `History<T>().AsOf(...)`
+- Restores historical incoming/outgoing graph connections from persisted node and edge envelopes (evaluated in memory after SQL history reads)
+- Proves rolled-back SQL transactions do not persist either node changes or their history records
 
 Test data uses unique identifiers; the entire SQL Server container is destroyed after the fixture. No private connection strings, external database or NuGet release are involved.
 
