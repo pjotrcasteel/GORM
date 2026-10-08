@@ -12,9 +12,11 @@ required = [
     ".github/BRANCH_PROTECTION.md",
     ".github/pull_request_template.md",
     ".github/releases/3.1.0-preview.1.md",
+    ".github/releases/3.2.0-preview.1.md",
     ".github/workflows/first-github-prerelease.yml",
     ".github/workflows/verify-public-nuget.yml",
     ".github/workflows/nuget-preview.yml",
+    ".github/workflows/nuget-stable.yml",
     ".github/scripts/verify_package_consumer.sh",
     ".github/scripts/check_nuget_preview.py",
     "SemanticVersion.props",
@@ -75,24 +77,32 @@ public_text = "\n".join([
 if 'GORM "Forge"' in public_text or "Forge compiler" in public_text:
     raise SystemExit("Do not expose the historical GORM-internal Forge sub-brand in public product copy.")
 
-# Publishing must be confined to the manually approved, main-only OIDC workflow.
-release_workflow = (ROOT / ".github/workflows/nuget-preview.yml").read_text(encoding="utf-8")
-release_guards = (
-    "github.event_name == 'workflow_dispatch'",
-    "inputs.publish == true",
-    "github.ref == 'refs/heads/main'",
-    "environment: nuget-preview",
-    "id-token: write",
-    "NuGet/login@v1",
-    "dotnet nuget push",
-)
-for guard in release_guards:
-    if guard not in release_workflow:
-        raise SystemExit(f"Missing guarded NuGet release policy: {guard}")
+# Publication is confined to the two manually approved main-only OIDC workflows.
+approved_nuget_publishers = {
+    "nuget-preview.yml": "nuget-preview",
+    "nuget-stable.yml": "nuget-stable",
+}
+for workflow_name, protected_environment in approved_nuget_publishers.items():
+    release_workflow = (ROOT / ".github/workflows" / workflow_name).read_text(encoding="utf-8")
+    release_guards = (
+        "github.event_name == 'workflow_dispatch'",
+        "inputs.publish == true",
+        "github.ref == 'refs/heads/main'",
+        f"environment: {protected_environment}",
+        "id-token: write",
+        "NuGet/login@v1",
+        "dotnet nuget push",
+        "check_nuget_preview.py",
+        "--reject-existing",
+        "publish GORM $EXPECTED_VERSION",
+    )
+    for guard in release_guards:
+        if guard not in release_workflow:
+            raise SystemExit(f"Missing guarded NuGet release policy in {workflow_name}: {guard}")
 
 for path in (ROOT / ".github/workflows").glob("*.yml"):
-    if path.name != "nuget-preview.yml" and "dotnet nuget push" in path.read_text(encoding="utf-8"):
-        raise SystemExit(f"NuGet publication outside the approved release workflow: {path.name}")
+    if path.name not in approved_nuget_publishers and "dotnet nuget push" in path.read_text(encoding="utf-8"):
+        raise SystemExit(f"NuGet publication outside the approved release workflows: {path.name}")
 
 if "Disallow: /" in (DOCS / "robots.txt").read_text(encoding="utf-8"):
     raise SystemExit("Public GORM site must be crawlable.")
@@ -100,8 +110,8 @@ if "Disallow: /" in (DOCS / "robots.txt").read_text(encoding="utf-8"):
 # Package and license assertions are intentionally statically checkable as well as CI-tested.
 project = (ROOT / "src/Gorm/Gorm.csproj").read_text(encoding="utf-8")
 version_props = (ROOT / "SemanticVersion.props").read_text(encoding="utf-8")
-if "<SemanticVersion>3.1.0</SemanticVersion>" not in version_props:
-    raise SystemExit("Expected single repository-wide GORM version 3.1.0.")
+if "<SemanticVersion>3.2.0</SemanticVersion>" not in version_props:
+    raise SystemExit("Expected single repository-wide GORM source version 3.2.0.")
 if (ROOT / "src/Gorm/SemanticVersion.props").exists():
     raise SystemExit("Project-specific semantic version overrides are not allowed.")
 for token in ("<PackageId>GORM</PackageId>", "<PackageLicenseExpression>MIT</PackageLicenseExpression>", "Microsoft.SourceLink.GitHub", "<PackageReadmeFile>README.md</PackageReadmeFile>"):

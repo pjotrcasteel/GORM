@@ -1,33 +1,32 @@
-name: GORM NuGet preview release
+name: GORM NuGet stable release
 
 on:
   pull_request:
     paths:
-      - '.github/workflows/nuget-preview.yml'
+      - '.github/workflows/nuget-stable.yml'
       - '.github/scripts/verify_package_consumer.sh'
       - '.github/scripts/check_nuget_preview.py'
       - '.github/verification/**'
       - 'RELEASING.md'
-      - 'src/**'
-      - 'tests/**'
-      - 'samples/Gorm.Demo/**'
+      - 'src/Gorm/Gorm.csproj'
+      - '.github/scripts/validate_nupkg.py'
       - 'SemanticVersion.props'
       - 'Directory.*.props'
       - 'NuGet.Config'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Exact prerelease package version'
+        description: 'Exact stable package version matching SemanticVersion.props'
         type: string
         required: true
-        default: '3.2.0-preview.1'
+        default: '3.2.0'
       publish:
         description: 'Publish to NuGet.org (unchecked = package and test only)'
         type: boolean
         required: true
         default: false
       confirmation:
-        description: 'For publishing, type: publish GORM 3.2.0-preview.1 (matching the version)'
+        description: 'For publishing, type: publish GORM 3.2.0 (matching the version)'
         type: string
         required: false
         default: ''
@@ -37,7 +36,7 @@ permissions:
 
 jobs:
   candidate:
-    name: Build and validate preview package
+    name: Build and validate stable package
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
@@ -49,7 +48,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - name: Validate preview version
+      - name: Validate stable version
         id: version
         shell: bash
         env:
@@ -57,9 +56,9 @@ jobs:
         run: |
           set -euo pipefail
           base="$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('SemanticVersion.props').findtext('PropertyGroup/SemanticVersion'))")"
-          version="${REQUESTED_VERSION:-$base-preview.1}"
-          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-preview\.[1-9][0-9]*$ ]] || [[ "$version" != "$base"-preview.* ]]; then
-            echo "::error::Use $base-preview.N (positive integer N)"
+          version="${REQUESTED_VERSION:-$base}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || [[ "$version" != "$base" ]]; then
+            echo "::error::Stable version must match SemanticVersion.props exactly: $base"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -67,28 +66,28 @@ jobs:
         run: python3 .github/scripts/check_nuget_preview.py "${{ steps.version.outputs.version }}"
       - name: Restore
         run: dotnet restore Gorm.sln --configfile NuGet.Config
-      - name: Build with prerelease version
+      - name: Build with stable version
         run: dotnet build Gorm.sln -c Release --no-restore -p:Version="${{ steps.version.outputs.version }}"
       - name: Run fast tests
         run: dotnet test Gorm.sln -c Release --no-build
       - name: Pack NuGet and SourceLink symbols
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/gorm-preview"
-          dotnet pack src/Gorm/Gorm.csproj -c Release --no-build -p:Version="${{ steps.version.outputs.version }}" -o "$RUNNER_TEMP/gorm-preview"
+          mkdir -p "$RUNNER_TEMP/gorm-stable"
+          dotnet pack src/Gorm/Gorm.csproj -c Release --no-build -p:Version="${{ steps.version.outputs.version }}" -o "$RUNNER_TEMP/gorm-stable"
           python3 .github/scripts/validate_nupkg.py \
-            "$RUNNER_TEMP/gorm-preview/GORM.${{ steps.version.outputs.version }}.nupkg" \
-            "$RUNNER_TEMP/gorm-preview/GORM.${{ steps.version.outputs.version }}.snupkg" \
+            "$RUNNER_TEMP/gorm-stable/GORM.${{ steps.version.outputs.version }}.nupkg" \
+            "$RUNNER_TEMP/gorm-stable/GORM.${{ steps.version.outputs.version }}.snupkg" \
             "${{ steps.version.outputs.version }}"
       - name: Clean consumer from local NuGet package
-        run: bash .github/scripts/verify_package_consumer.sh "${{ steps.version.outputs.version }}" "$RUNNER_TEMP/gorm-preview" local
-      - name: Upload verified preview packages
+        run: bash .github/scripts/verify_package_consumer.sh "${{ steps.version.outputs.version }}" "$RUNNER_TEMP/gorm-stable" local
+      - name: Upload verified stable packages
         uses: actions/upload-artifact@v4
         with:
-          name: gorm-preview-${{ steps.version.outputs.version }}
+          name: gorm-stable-${{ steps.version.outputs.version }}
           path: |
-            ${{ runner.temp }}/gorm-preview/*.nupkg
-            ${{ runner.temp }}/gorm-preview/*.snupkg
+            ${{ runner.temp }}/gorm-stable/*.nupkg
+            ${{ runner.temp }}/gorm-stable/*.snupkg
           if-no-files-found: error
           retention-days: 14
 
@@ -111,17 +110,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gorm-preview-sqlserver-results
+          name: gorm-stable-sqlserver-results
           path: tests/Gorm.SqlServer.Tests/TestResults/*.trx
           if-no-files-found: ignore
 
   publish:
-    name: Publish explicitly approved preview to NuGet.org
+    name: Publish explicitly approved stable version to NuGet.org
     if: github.event_name == 'workflow_dispatch' && inputs.publish == true && github.ref == 'refs/heads/main'
     needs: [candidate, sqlserver]
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    environment: nuget-preview
+    environment: nuget-stable
     permissions:
       contents: read
       id-token: write
@@ -144,8 +143,8 @@ jobs:
           python3 .github/scripts/check_nuget_preview.py "$EXPECTED_VERSION" --reject-existing
       - uses: actions/download-artifact@v4
         with:
-          name: gorm-preview-${{ needs.candidate.outputs.version }}
-          path: ${{ runner.temp }}/gorm-preview
+          name: gorm-stable-${{ needs.candidate.outputs.version }}
+          path: ${{ runner.temp }}/gorm-stable
       - name: Exchange GitHub OIDC token for short-lived NuGet key
         id: nuget
         uses: NuGet/login@v1
@@ -158,8 +157,8 @@ jobs:
           RELEASE_VERSION: ${{ needs.candidate.outputs.version }}
         run: |
           set -euo pipefail
-          test -f "$RUNNER_TEMP/gorm-preview/GORM.$RELEASE_VERSION.snupkg"
-          dotnet nuget push "$RUNNER_TEMP/gorm-preview/GORM.$RELEASE_VERSION.nupkg" \
+          test -f "$RUNNER_TEMP/gorm-stable/GORM.$RELEASE_VERSION.snupkg"
+          dotnet nuget push "$RUNNER_TEMP/gorm-stable/GORM.$RELEASE_VERSION.nupkg" \
             --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
       - name: Record successful NuGet upload
         shell: bash
