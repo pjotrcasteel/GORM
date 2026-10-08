@@ -44,7 +44,11 @@ jobs:
           site="$RUNNER_TEMP/gorm-pages"
           mkdir -p "$site/playground-wasm"
           cp -a docs/. "$site/"
-          cp -a samples/Gorm.Playground.Browser/bin/Release/net10.0/publish/. "$site/playground-wasm/"
+          publish="samples/Gorm.Playground.Browser/bin/Release/net10.0/publish"
+          boot="$(find "$publish" -type f -path '*/_framework/dotnet.js' -print -quit)"
+          test -n "$boot"
+          bundle="${boot%/_framework/dotnet.js}"
+          cp -a "$bundle/." "$site/playground-wasm/"
           test -f "$site/playground-wasm/_framework/dotnet.js"
           find "$site/playground-wasm/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
           du -sh "$site/playground-wasm"
