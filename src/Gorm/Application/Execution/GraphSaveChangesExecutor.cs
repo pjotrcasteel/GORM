@@ -138,6 +138,11 @@ public sealed class GraphSaveChangesExecutor
 
             affectedRows += await DeleteIncidentEdgesForDeletedNodesAsync(context, saveSet, connection, transaction, cancellationToken);
 
+            if (saveSet.DeletedEntries.Any(x => x.Entity is Node) && context.AfterIncidentEdgeCleanupForTesting is { } afterCleanup)
+            {
+                await afterCleanup(cancellationToken);
+            }
+
             affectedRows += await ProcessDeletedEntitiesAsync(context, saveSet, connection, transaction, cancellationToken);
 
             if (captureHistoryAsync is not null)
@@ -265,6 +270,11 @@ public sealed class GraphSaveChangesExecutor
             }
 
             SetInitialConcurrencyTokenIfNeeded(pendingEdge.Edge);
+
+            if (context.BeforeEdgeEndpointLookupForTesting is { } beforeLookup)
+            {
+                await beforeLookup(cancellationToken);
+            }
 
             var edgeMapping = context.Model.GetEdge(pendingEdge.Edge.GetType());
             var edgePlan = GraphSaveCommandPlanCache.GetEdgePlan(edgeMapping);
