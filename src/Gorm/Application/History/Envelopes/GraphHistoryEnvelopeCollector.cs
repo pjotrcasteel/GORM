@@ -171,8 +171,6 @@ internal static class GraphHistoryEnvelopeCollector
         DateTime capturedAtUtc,
         IReadOnlyCollection<GraphHistoryEnvelope> existing)
     {
-        if (!SqlServerGraphHistoryReaderRegistry.TryGet(context, out var reader)) yield break;
-
         var deletedIds = changeTracker.Entries
             .Where(x => x.State == EntityState.Deleted && x.Entity is Node)
             .Select(x => ((Node)x.Entity).Id).ToHashSet();
@@ -181,6 +179,27 @@ internal static class GraphHistoryEnvelopeCollector
         var terminatedEdges = existing
             .Where(x => x.IsEdge && x.OperationKind is GraphHistoryOperationKind.Deleted or GraphHistoryOperationKind.Disconnected)
             .Select(x => (x.EntityType, x.EntityId)).ToHashSet();
+
+        if (context.ExecutionEngine is InMemoryGraphExecutionEngine inMemoryEngine)
+        {
+            foreach (var mapping in context.Model.Edges)
+            {
+                if (!inMemoryEngine.Store.EdgesByType.TryGetValue(mapping.ClrType, out var edges)) continue;
+
+                foreach (var edge in edges.Values)
+                {
+                    if (!deletedIds.Contains(edge.FromId) && !deletedIds.Contains(edge.ToId)) continue;
+                    if (!terminatedEdges.Add((mapping.ClrType, edge.Id))) continue;
+
+                    yield return GraphHistoryEnvelope.ForEdge(
+                        CloneEdge(context, edge), GraphHistoryOperationKind.Deleted, capturedAtUtc, capturedAtUtc, capturedAtUtc);
+                }
+            }
+
+            yield break;
+        }
+
+        if (!SqlServerGraphHistoryReaderRegistry.TryGet(context, out var reader)) yield break;
 
         foreach (var mapping in context.Model.Edges)
         {
