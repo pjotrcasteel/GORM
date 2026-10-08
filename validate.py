@@ -7,6 +7,7 @@ required = [
     "README.md",
     "LICENSE",
     "RELEASING.md",
+    ".github/workflows/verify-public-nuget.yml",
     ".github/workflows/nuget-preview.yml",
     ".github/scripts/verify_package_consumer.sh",
     ".github/scripts/check_nuget_preview.py",
