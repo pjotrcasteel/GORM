@@ -43,4 +43,95 @@ public sealed partial class SqlServerGraphIntegrationTests
         Assert.AreEqual(target.Id, terminal[0].ToId);
         Assert.IsEmpty(HistoricalTargets(context, source.Id, afterDelete));
     }
+    [TestMethod]
+    public async Task SqlHistory_DeleteNodeWithIncomingOutgoingParallelAndSelfEdges_LeavesOnlyUnrelatedEdges()
+    {
+        var clock = new ControlledHistoryTimeProvider(new DateTimeOffset(2026, 10, 2, 10, 0, 0, TimeSpan.Zero));
+        var context = CreateHistoryContext(clock);
+        var (source, target) = await CreateHistoryNodesAsync(context);
+        var other = new CharacteristicSpecificationNode { Id = Guid.NewGuid(), Name = "Other", Payload = "{}" };
+        context.Add(other);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        var outgoing1 = ConnectHistoricalEdge(context, source, target);
+        var outgoing2 = ConnectHistoricalEdge(context, source, target);
+        var incoming = ConnectHistoricalEdge(context, target, source);
+        var self = ConnectHistoricalEdge(context, source, source);
+        var unrelated = ConnectHistoricalEdge(context, target, other);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        context.Remove(source);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+
+        var deleted = new[] { outgoing1.Id, outgoing2.Id, incoming.Id, self.Id };
+        var remainingIds = await ReadStoredEdgeIdsAsync([.. deleted, unrelated.Id]);
+        Assert.HasCount(1, remainingIds);
+        Assert.IsTrue(remainingIds.Contains(unrelated.Id), "Unrelated edges must remain live.");
+
+        var history = await new SqlServerGraphHistoryReader(context.ConnectionFactory!)
+            .ReadEdgeHistoryAsync<CharacteristicSpecificationMapEdge>(TestContext.CancellationToken);
+        foreach (var edgeId in deleted)
+        {
+            var records = history.Where(x => x.EntityId == edgeId).ToArray();
+            Assert.AreEqual(1, records.Count(x => x.OperationKind == GraphHistoryOperationKind.Connected));
+            Assert.AreEqual(1, records.Count(x => x.OperationKind == GraphHistoryOperationKind.Deleted));
+        }
+
+        Assert.IsFalse(history.Any(x => x.EntityId == unrelated.Id && x.OperationKind == GraphHistoryOperationKind.Deleted));
+    }
+
+    [TestMethod]
+    public async Task SqlHistory_DeleteNodeWithEdge_TransactionRollbackRestoresNodeEdgeAndOriginalHistory()
+    {
+        var clock = new ControlledHistoryTimeProvider(new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero));
+        var context = CreateHistoryContext(clock);
+        var (source, target) = await CreateHistoryNodesAsync(context);
+        var edge = ConnectHistoricalEdge(context, source, target);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        await using (var transaction = await context.BeginTransactionAsync(TestContext.CancellationToken))
+        {
+            context.Remove(source);
+            await context.SaveChangesAsync(TestContext.CancellationToken);
+            await transaction.RollbackAsync(TestContext.CancellationToken);
+        }
+
+        var remainingIds = await ReadStoredEdgeIdsAsync([edge.Id]);
+        Assert.IsTrue(remainingIds.Contains(edge.Id));
+        var exists = await Gorm.Application.Execution.GraphQueryableOperatorsExtensions.AnyAsync(
+            CreateContext().CharacteristicSpecifications.Where(x => x.Id == source.Id), TestContext.CancellationToken);
+        Assert.IsTrue(exists, "Rollback must restore the deleted node.");
+
+        var history = (await new SqlServerGraphHistoryReader(context.ConnectionFactory!)
+            .ReadEdgeHistoryAsync<CharacteristicSpecificationMapEdge>(TestContext.CancellationToken))
+            .Where(x => x.EntityId == edge.Id).ToArray();
+        Assert.HasCount(1, history);
+        Assert.AreEqual(GraphHistoryOperationKind.Connected, history[0].OperationKind);
+    }
+
+    private async Task<HashSet<Guid>> ReadStoredEdgeIdsAsync(IReadOnlyList<Guid> ids)
+    {
+        await using var connection = new SqlConnection(_databaseConnectionString);
+        await connection.OpenAsync(TestContext.CancellationToken);
+        await using var command = connection.CreateCommand();
+        var parameterNames = ids.Select((_, index) => $"@id{index}").ToArray();
+        command.CommandText = $"SELECT [Id] FROM [dbo].[CharacteristicSpecificationMapsIntoCharacteristicSpecifications] WHERE [Id] IN ({string.Join(", ", parameterNames)})";
+        for (var index = 0; index < ids.Count; index++)
+        {
+            command.Parameters.AddWithValue(parameterNames[index], ids[index]);
+        }
+
+        var results = new HashSet<Guid>();
+        await using var reader = await command.ExecuteReaderAsync(TestContext.CancellationToken);
+        while (await reader.ReadAsync(TestContext.CancellationToken))
+        {
+            results.Add(reader.GetGuid(0));
+        }
+
+        return results;
+    }
+
 }
