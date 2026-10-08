@@ -16,7 +16,7 @@
 <main class="playground-shell wrap-wide">
 <section class="playground-intro">
   <div><div class="eyebrow">LINQ → GRAPH INTENT → SQL</div><h1>Change the query.<br><span>See what GORM sees.</span></h1><p>Edit a focused GORM query and inspect four views at once: C# intent, graph/query anatomy, translation diagnostics and the resulting SQL Server Graph shape.</p></div>
-  <div class="preview-note"><strong>Documentation preview</strong><p>The actual GORM implementation and NuGet package are public, but this browser tool still uses a JavaScript documentation preview translator. Its SQL is illustrative, not authoritative. The future zero-cost, client-side runtime integration will use the same translator contract; until then, see the NuGet-only getting-started sample for real GORM Explain() output.</p></div>
+  <div class="preview-note"><strong>Documentation preview</strong><p>The actual GORM implementation and NuGet package are public, but this browser tool still uses a JavaScript documentation preview translator. Its SQL is illustrative, not authoritative. A .NET WebAssembly runtime supplies real GORM Explain() SQL for four verified original examples. Temporal, Include and user-edited queries remain clearly marked documentation previews; arbitrary C# is not executed.</p></div>
 </section>
 
 <section class="runtime-status-grid" aria-label="Translator status">
@@ -69,12 +69,12 @@
 
 <section class="playground-details">
   <article><span>WHY THIS MATTERS</span><h2>Graph intent should be inspectable.</h2><p>The query anatomy separates node roots, scalar predicates, traversal direction, edge types, targets, temporal context and limits. The inspector then shows which translation stages and parameters are involved.</p></article>
-  <article><span>SHARE EXACT REPRODUCTIONS</span><h2>Every custom query can become a permalink.</h2><p>Use <strong>Share query</strong> to encode the editor state in the URL. That makes examples usable in docs, issues and PR discussions without pretending the generated SQL is an authoritative runtime result.</p></article>
+  <article><span>SHARE EXACT REPRODUCTIONS</span><h2>Every custom query can become a permalink.</h2><p>Use <strong>Share query</strong> to encode the editor state in the URL. The SQL panel always identifies whether the displayed query used GORM WebAssembly or the illustrative JavaScript fallback.</p></article>
 </section>
 
 <section class="runtime-contract">
   <span>RUNTIME INTEGRATION CONTRACT</span><h2>The UI depends on one translator contract.</h2>
-  <p>The playground shell owns editor state and sharing. The runtime owns translation and rendering. A future GORM runtime adapter only needs metadata plus an async-compatible <code>translate(query)</code> function, while the example contracts continuously verify the documented behavior.</p>
+  <p>The playground shell owns editor state and sharing. The runtime owns translation and rendering. The bounded GORM WebAssembly runtime implements metadata plus an async-compatible <code>translate(query)</code> function, while the example contracts continuously verify the documented behavior.</p>
   <pre><code>window.GormPlaygroundEngine = {
     metadata: {
         id: "gorm-runtime",
@@ -100,4 +100,5 @@
 <script src="./playground-shell.js"></script>
 <script src="./playground-query-library.js"></script>
 <script src="./playground-runtime.js"></script>
+<script src="./playground-gorm-runtime.js"></script>
 </body></html>
