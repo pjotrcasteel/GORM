@@ -1,6 +1,6 @@
 (()=>{
   function findRootType(query){return query.match(/Set\s*<\s*([A-Za-z_][A-Za-z0-9_.]*)\s*>/)?.[1]??null;}
-  function findTraversals(query){return [...query.matchAll(/\.(Outgoing|Incoming)\s*<\s*([A-Za-z_][A-Za-z0-9_.]*)\s*,\s*([A-Za-z_][A-Za-z0-9_.]*)\s*>\s*\(\s*\)/g)].map(x=>({direction:x[1].toLowerCase(),edge:x[2],target:x[3]}));}
+  function findTraversals(query){return [...query.matchAll(/\.(?:Then)?(Outgoing|Incoming)\s*<\s*([A-Za-z_][A-Za-z0-9_.]*)\s*,\s*([A-Za-z_][A-Za-z0-9_.]*)\s*>\s*\(\s*\)/g)].map(x=>({direction:x[1].toLowerCase(),edge:x[2],target:x[3]}));}
   function findTake(query){const match=query.match(/\.Take\s*\(\s*(\d+)\s*\)/);return match?Number(match[1]):null;}
   function findSkip(query){const match=query.match(/\.Skip\s*\(\s*(\d+)\s*\)/);return match?Number(match[1]):null;}
   function findAsOf(query){return query.match(/\.AsOf\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\)/)?.[1]??null;}

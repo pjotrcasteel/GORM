@@ -1,0 +1,68 @@
+name: Playground real GORM WebAssembly
+on:
+  pull_request:
+    paths:
+      - 'samples/Gorm.Playground.*/**'
+      - 'src/**'
+      - '.github/workflows/playground-wasm-validation.yml'
+      - 'Directory.*.props'
+  push:
+    branches: [main]
+    paths:
+      - 'samples/Gorm.Playground.*/**'
+      - 'src/**'
+      - '.github/workflows/playground-wasm-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-gorm-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run native reference GORM Explain assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project samples/Gorm.Playground.Verify/Gorm.Playground.Verify.csproj -c Release | tee "$RUNNER_TEMP/playground-native.log"
+      - name: Install .NET WASM tools
+        run: dotnet workload install wasm-tools
+      - name: Publish real GORM WebAssembly
+        run: dotnet publish samples/Gorm.Playground.Browser/Gorm.Playground.Browser.csproj -c Release
+      - name: Discover and verify published browser assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish="samples/Gorm.Playground.Browser/bin/Release/net10.0/publish"
+          boot="$(find "$publish" -type f -path '*/_framework/dotnet.js' -print -quit)"
+          if [ -z "$boot" ]; then
+            echo "::error::No dotnet.js boot module found in published output"
+            find "$publish" -maxdepth 6 -type f | head -100
+            exit 1
+          fi
+          bundle="${boot%/_framework/dotnet.js}"
+          test -f "$bundle/_framework/dotnet.js"
+          find "$bundle/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
+          echo "GORM_WASM_BUNDLE=$bundle" >> "$GITHUB_ENV"
+          du -sh "$bundle"
+      - name: Install browser test dependency and Chromium
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Stage browser verification site
+        shell: bash
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/gorm-pages-playwright"
+          mkdir -p "$site/playground-wasm"
+          cp -a docs/. "$site/"
+          cp -a "$GORM_WASM_BUNDLE/." "$site/playground-wasm/"
+      - name: Compare real WASM SQL to native GORM SQL in Chromium
+        run: node .github/scripts/verify_playground_browser.cjs "$RUNNER_TEMP/gorm-pages-playwright" "$RUNNER_TEMP/playground-native.log"
