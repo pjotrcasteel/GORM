@@ -11,9 +11,20 @@ The latest **public** package remains `GORM 3.1.0-preview.1`. Updating `Semantic
 - First use the **GORM NuGet preview release** manual workflow with `version=3.2.0-preview.1` and `publish=false`. It validates and uploads an Actions candidate artifact but **never publishes** to NuGet.
 - Publishing the immutable preview requires deliberate package-owner approval and the existing guarded `nuget-preview` Trusted Publishing configuration. Set `publish=true` only after inspecting the candidate; confirmation must exactly match `publish GORM 3.2.0-preview.1`.
 - Independently verify the **public** preview from NuGet.org before creating tag `v3.2.0-preview.1` and matching GitHub prerelease at the **exact source commit used for packaging**.
-- Stable `3.2.0` is a separate future release gate: do not use the prerelease workflow to publish stable. The dedicated stable-publishing workflow, trusted-publishing environment/policy and approval flow must be prepared and validated first. Publishing is always a manual, irreversible action.
+- Stable `3.2.0` uses the separate [GORM NuGet stable release](.github/workflows/nuget-stable.yml) workflow, **not** the preview workflow. Run it on `main` first with `version=3.2.0` and `publish=false`. A later `publish=true` dispatch additionally requires the exact confirmation `publish GORM 3.2.0`, both release gates, and the `nuget-stable` protected environment. Publishing is always a manual, irreversible action.
 
 The 3.2 release candidate is not blocked by the opt-in WebAssembly download size, arbitrary C# Playground editing, a future Visual Studio extension, or unverified experimental graph-intelligence capabilities not promised by the stable core package.
+
+## One-time stable NuGet Trusted Publishing setup
+
+A stable package uses a **different GitHub Actions workflow and environment** than the existing preview. Before an authorized stable publish:
+
+1. Configure a separate NuGet.org Trusted Publishing policy for GitHub owner `pjotrcasteel`, repo `GORM`, workflow filename `nuget-stable.yml`, environment `nuget-stable` and account/package owner `PjotrCasteel`.
+2. Configure GitHub's `nuget-stable` environment with required manual review and `main` deployment-branch restriction. GitHub and NuGet.org credentials are not stored in source control.
+3. Verify the `GORM NuGet stable release` workflow passes both local-package/clean-consumer and real SQL Server 2022 gates with `publish=false`. Validate the exact source SHA before approving `publish=true`.
+4. After publication, run the [GORM public NuGet verification](.github/workflows/verify-public-nuget.yml) with `version=3.2.0` and confirm an independent clean restore. Only then create GitHub release/tag `v3.2.0` at the exact package source SHA.
+
+Do **not** run a stable NuGet publication automatically after a merge. The workflow's publish job is dispatch-only and requires explicit version-matching confirmation.
 
 ## Quality gates
 
