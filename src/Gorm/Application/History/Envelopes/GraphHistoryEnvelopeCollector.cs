@@ -28,6 +28,7 @@ internal static class GraphHistoryEnvelopeCollector
         entries.AddRange(CaptureEntityEntries(context, changeTracker, capturedAtUtc));
         entries.AddRange(CapturePendingConnections(context, changeTracker, capturedAtUtc));
         entries.AddRange(CapturePendingDisconnections(context, changeTracker, capturedAtUtc));
+        entries.AddRange(CaptureDeletedNodeCascadeEdges(context, changeTracker, capturedAtUtc, entries));
 
         return entries;
     }
@@ -160,6 +161,37 @@ internal static class GraphHistoryEnvelopeCollector
             foreach (var edge in FindMatchingEdges(context, pendingDisconnection.EdgeType, pendingDisconnection.FromNode.Id, pendingDisconnection.ToNode.Id))
             {
                 yield return GraphHistoryEnvelope.ForEdge(CloneEdge(context, edge), GraphHistoryOperationKind.Disconnected, capturedAtUtc, capturedAtUtc, capturedAtUtc);
+            }
+        }
+    }
+
+    private static IEnumerable<GraphHistoryEnvelope> CaptureDeletedNodeCascadeEdges(
+        GraphContext context,
+        GraphChangeTracker changeTracker,
+        DateTime capturedAtUtc,
+        IReadOnlyCollection<GraphHistoryEnvelope> existing)
+    {
+        if (!SqlServerGraphHistoryReaderRegistry.TryGet(context, out var reader)) yield break;
+
+        var deletedIds = changeTracker.Entries
+            .Where(x => x.State == EntityState.Deleted && x.Entity is Node)
+            .Select(x => ((Node)x.Entity).Id).ToHashSet();
+        if (deletedIds.Count == 0) yield break;
+
+        var terminatedEdges = existing
+            .Where(x => x.IsEdge && x.OperationKind is GraphHistoryOperationKind.Deleted or GraphHistoryOperationKind.Disconnected)
+            .Select(x => (x.EntityType, x.EntityId)).ToHashSet();
+
+        foreach (var mapping in context.Model.Edges)
+        {
+            foreach (var state in reader.ReadActiveEdgeStates(mapping.ClrType))
+            {
+                if (state.Snapshot is not Edge edge) continue;
+                if (!deletedIds.Contains(edge.FromId) && !deletedIds.Contains(edge.ToId)) continue;
+                if (!terminatedEdges.Add((mapping.ClrType, state.Id))) continue;
+
+                yield return GraphHistoryEnvelope.ForEdge(
+                    CloneEdge(context, edge), GraphHistoryOperationKind.Deleted, capturedAtUtc, capturedAtUtc, capturedAtUtc);
             }
         }
     }
