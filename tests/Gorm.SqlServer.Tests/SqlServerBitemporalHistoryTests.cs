@@ -166,6 +166,66 @@ public sealed partial class SqlServerGraphIntegrationTests
                 [id], [], maximumHistoryEntries: 1, cancellationToken: TestContext.CancellationToken));
     }
 
+    [TestMethod]
+    public async Task SqlBitemporal_AtomicCapture_IncludesCommittedNodeAndEdgeHistory()
+    {
+        var sourceId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var edgeId = Guid.NewGuid();
+        await PersistBitemporalHistoryAsync(
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(sourceId, "Source"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(targetId, "Target"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForEdge(NewHistoryEdge(edgeId, sourceId, targetId), GraphHistoryOperationKind.Connected, BitemporalDay1, BitemporalDay1));
+
+        var dataset = await BitemporalReader().CaptureBitemporalDatasetAsync<CharacteristicSpecificationNode, CharacteristicSpecificationMapEdge>(
+            [sourceId, targetId], [edgeId], cancellationToken: TestContext.CancellationToken);
+        var result = dataset.Project(new GraphProjectionKey("temporal/atomic"), 1, At(BitemporalDay2, BitemporalDay2));
+
+        Assert.AreEqual(3, dataset.Count);
+        Assert.HasCount(2, result.Snapshot.Nodes);
+        Assert.HasCount(1, result.Snapshot.Edges);
+        Assert.AreEqual(edgeId, result.Snapshot.Edges.Single().Id);
+    }
+
+    [TestMethod]
+    public async Task SqlBitemporal_ConcurrentCommitBetweenNodeAndEdgeReads_PreservesSingleSnapshot()
+    {
+        var sourceId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var edgeId = Guid.NewGuid();
+        await PersistBitemporalHistoryAsync(
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(sourceId, "Original"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(targetId, "Target"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForEdge(NewHistoryEdge(edgeId, sourceId, targetId), GraphHistoryOperationKind.Connected, BitemporalDay1, BitemporalDay1));
+
+        var reader = BitemporalReader();
+        var first = await reader.CaptureBitemporalDatasetWithInterleavingAsync<CharacteristicSpecificationNode, CharacteristicSpecificationMapEdge>(
+            [sourceId, targetId], [edgeId],
+            async cancellationToken =>
+            {
+                // This batch commits on a different connection AFTER the node read but BEFORE the edge read.
+                // A read-committed implementation would capture an old node with a new edge lifecycle.
+                await BitemporalRecorder().PersistAsync(
+                    [
+                        GraphHistoryEnvelope.ForNode(NewHistoryNode(sourceId, "Updated"), GraphHistoryOperationKind.Updated, BitemporalDay3, BitemporalDay1),
+                        GraphHistoryEnvelope.ForEdge(NewHistoryEdge(edgeId, sourceId, targetId), GraphHistoryOperationKind.Disconnected, BitemporalDay3, BitemporalDay3)
+                    ], connection: null, transaction: null, cancellationToken);
+            }, TestContext.CancellationToken);
+
+        var second = await reader.CaptureBitemporalDatasetAsync<CharacteristicSpecificationNode, CharacteristicSpecificationMapEdge>(
+            [sourceId, targetId], [edgeId], cancellationToken: TestContext.CancellationToken);
+
+        Assert.AreEqual(3, first.Count, "A snapshot may not include the concurrent commit's edge-only history.");
+        Assert.AreEqual(5, second.Count, "A new snapshot must observe the committed node and edge changes.");
+
+        var beforeCommit = first.Project(new GraphProjectionKey("temporal/concurrent"), 1, At(BitemporalDay5, BitemporalDay5));
+        var afterCommit = second.Project(new GraphProjectionKey("temporal/concurrent"), 2, At(BitemporalDay5, BitemporalDay5));
+        Assert.AreEqual("Original", beforeCommit.Snapshot.Nodes.Single(x => x.Id == sourceId).Materialize<CharacteristicSpecificationNode>().Name);
+        Assert.HasCount(1, beforeCommit.Snapshot.Edges);
+        Assert.AreEqual("Updated", afterCommit.Snapshot.Nodes.Single(x => x.Id == sourceId).Materialize<CharacteristicSpecificationNode>().Name);
+        Assert.IsEmpty(afterCommit.Snapshot.Edges);
+    }
+
     private static GraphBitemporalCoordinate At(DateTime validAt, DateTime recordedAt) =>
         new(new DateTimeOffset(validAt), new DateTimeOffset(recordedAt));
 

@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using Gorm.Application.History.Envelopes;
 using Gorm.Application.Temporal.Bitemporal;
@@ -79,8 +80,8 @@ public sealed class SqlServerGraphHistoryReader
 
     /// <summary>
     /// Captures a bounded bitemporal dataset for explicitly scoped node and edge identities.
-    /// SQL history is read separately for each entity type before filtering by identity;
-    /// callers requiring an atomic cross-table read must coordinate concurrent history writers.
+    /// Node and edge history are read in one SQL Server snapshot transaction to prevent
+    /// mixed generations when concurrent history writers commit.
     /// </summary>
     /// <typeparam name="TNode">The history node type.</typeparam>
     /// <typeparam name="TEdge">The history edge type.</typeparam>
@@ -89,11 +90,31 @@ public sealed class SqlServerGraphHistoryReader
     /// <param name="maximumHistoryEntries">Maximum selected history envelopes to materialize.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A detached dataset for valid-time and recorded-time projections.</returns>
-    public async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
+    public Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
         IReadOnlyCollection<Guid> nodeIds,
         IReadOnlyCollection<Guid> edgeIds,
         int maximumHistoryEntries = 1_000_000,
         CancellationToken cancellationToken = default)
+        where TNode : Node
+        where TEdge : Edge =>
+        CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(nodeIds, edgeIds, maximumHistoryEntries, afterNodeReadAsync: null, cancellationToken);
+
+    // An internal seam allows integration tests to commit a concurrent batch exactly between the two reads.
+    internal Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetWithInterleavingAsync<TNode, TEdge>(
+        IReadOnlyCollection<Guid> nodeIds,
+        IReadOnlyCollection<Guid> edgeIds,
+        Func<CancellationToken, Task> afterNodeReadAsync,
+        CancellationToken cancellationToken = default)
+        where TNode : Node
+        where TEdge : Edge =>
+        CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(nodeIds, edgeIds, 1_000_000, afterNodeReadAsync, cancellationToken);
+
+    private async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(
+        IReadOnlyCollection<Guid> nodeIds,
+        IReadOnlyCollection<Guid> edgeIds,
+        int maximumHistoryEntries,
+        Func<CancellationToken, Task>? afterNodeReadAsync,
+        CancellationToken cancellationToken)
         where TNode : Node
         where TEdge : Edge
     {
@@ -102,9 +123,14 @@ public sealed class SqlServerGraphHistoryReader
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumHistoryEntries);
         var nodeFilter = nodeIds.ToHashSet();
         var edgeFilter = edgeIds.ToHashSet();
+        await using var connection = _connectionFactory.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.Snapshot, cancellationToken);
+
         var nodes = nodeFilter.Count == 0
             ? []
-            : (await ReadNodeHistoryAsync<TNode>(cancellationToken)).Where(x => nodeFilter.Contains(x.EntityId)).ToArray();
+            : (await ReadHistoryAsync(typeof(TNode), isEdge: false, connection, transaction, cancellationToken))
+                .Where(x => nodeFilter.Contains(x.EntityId)).ToArray();
 
         if (nodes.Length > maximumHistoryEntries)
         {
@@ -113,10 +139,19 @@ public sealed class SqlServerGraphHistoryReader
                 $"Node history exceeded {nameof(maximumHistoryEntries)} ({maximumHistoryEntries}).");
         }
 
+        if (afterNodeReadAsync is not null)
+        {
+            await afterNodeReadAsync(cancellationToken);
+        }
+
         var edges = edgeFilter.Count == 0
             ? []
-            : (await ReadEdgeHistoryAsync<TEdge>(cancellationToken)).Where(x => edgeFilter.Contains(x.EntityId)).ToArray();
-        return GraphWorldHistoryDataset.Capture(nodes.Concat(edges), maximumHistoryEntries, cancellationToken);
+            : (await ReadHistoryAsync(typeof(TEdge), isEdge: true, connection, transaction, cancellationToken))
+                .Where(x => edgeFilter.Contains(x.EntityId)).ToArray();
+
+        var dataset = GraphWorldHistoryDataset.Capture(nodes.Concat(edges), maximumHistoryEntries, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return dataset;
     }
 
     private List<GraphHistoryEnvelope> ReadHistory(Type entityType, bool isEdge, Guid? fromId = null, Guid? toId = null, Guid? entityId = null)
@@ -145,6 +180,21 @@ public sealed class SqlServerGraphHistoryReader
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            results.Add(ReadEnvelope(reader, entityType, isEdge));
+        }
+
+        return results;
+    }
+
+    private async Task<IReadOnlyList<GraphHistoryEnvelope>> ReadHistoryAsync(
+        Type entityType, bool isEdge, DbConnection connection, DbTransaction transaction, CancellationToken cancellationToken)
+    {
+        await using var command = CreateHistoryCommand(connection, entityType, isEdge);
+        command.Transaction = transaction;
+        var results = new List<GraphHistoryEnvelope>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
             results.Add(ReadEnvelope(reader, entityType, isEdge));

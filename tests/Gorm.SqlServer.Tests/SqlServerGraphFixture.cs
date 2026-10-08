@@ -36,6 +36,14 @@ public sealed partial class SqlServerGraphIntegrationTests
             await command.ExecuteNonQueryAsync(context.CancellationToken);
         }
 
+        await using (var connection = new SqlConnection(master.ConnectionString))
+        {
+            await connection.OpenAsync(context.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "ALTER DATABASE [GormIntegration] SET ALLOW_SNAPSHOT_ISOLATION ON";
+            await command.ExecuteNonQueryAsync(context.CancellationToken);
+        }
+
         master.InitialCatalog = "GormIntegration";
         _databaseConnectionString = master.ConnectionString;
 
