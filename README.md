@@ -106,7 +106,7 @@ dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
 
 The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration runs as a separate GitHub Actions quality gate.
 
-Public source is licensed under the [MIT License](LICENSE). The package has **not** been published to NuGet.org. The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
+Public source is licensed under the [MIT License](LICENSE). The [first NuGet preview release](RELEASING.md) uses `3.1.0-preview.1` and has an approval-gated workflow; inspect NuGet.org to confirm whether it has actually been published. The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
 
 ## SQL Server 2022 integration tests
 
@@ -115,6 +115,12 @@ A separate [Testcontainers integration suite](tests/Gorm.SqlServer.Tests/README.
 ```bash
 dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release
 ```
+
+## First NuGet preview
+
+The candidate version is `GORM 3.1.0-preview.1`. A separate [preview release workflow](.github/workflows/nuget-preview.yml) verifies a locally produced NuGet package, tests a clean consumer and gates release on real SQL Server 2022 integration tests. Publishing is opt-in and uses NuGet.org Trusted Publishing with a short-lived GitHub OIDC credential.
+
+See [RELEASING.md](RELEASING.md) for setup, safety gates and the publication procedure. Neither merging a PR nor generating a GitHub artifact publishes the package.
 
 ## Creator
 
