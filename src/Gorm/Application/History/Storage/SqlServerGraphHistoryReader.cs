@@ -1,6 +1,8 @@
 ﻿using System.Data.Common;
 using System.Text.Json;
+using Gorm.Core.Primitives;
 using Gorm.Application.History.Envelopes;
+using Gorm.Application.History;
 using Gorm.Infrastructure.Persistence.Connections;
 using Gorm.Infrastructure.Providers.SqlServer.Helpers;
 
@@ -60,11 +62,24 @@ public sealed class SqlServerGraphHistoryReader
     public IReadOnlyList<GraphHistoryEnvelope> ReadEdgeHistory<TEdge>() =>
         ReadHistory(typeof(TEdge), isEdge: true);
 
-    private List<GraphHistoryEnvelope> ReadHistory(Type entityType, bool isEdge)
+    internal IReadOnlyList<EdgeHistoryState> ReadActiveEdgeStates(Type edgeType, Guid? fromId = null, Guid? toId = null, Guid? entityId = null)
+    {
+        ArgumentNullException.ThrowIfNull(edgeType);
+        var entries = ReadHistory(edgeType, isEdge: true, fromId, toId, entityId);
+        return [.. entries
+            .GroupBy(x => x.EntityId)
+            .Select(x => x.OrderByDescending(e => e.CapturedAtUtc).ThenBy(e => e.ValidToUtc.HasValue).First())
+            .Where(x => x.OperationKind is not (GraphHistoryOperationKind.Disconnected or GraphHistoryOperationKind.Deleted))
+            .Select(x => new EdgeHistoryState(x.EntityId, x.Snapshot))];
+    }
+
+    internal sealed record EdgeHistoryState(Guid Id, object Snapshot);
+
+    private List<GraphHistoryEnvelope> ReadHistory(Type entityType, bool isEdge, Guid? fromId = null, Guid? toId = null, Guid? entityId = null)
     {
         using var connection = _connectionFactory.CreateConnection();
         connection.Open();
-        using var command = CreateHistoryCommand(connection, entityType, isEdge);
+        using var command = CreateHistoryCommand(connection, entityType, isEdge, fromId, toId, entityId);
         using var reader = command.ExecuteReader();
         var results = new List<GraphHistoryEnvelope>();
         while (reader.Read())
@@ -94,10 +109,15 @@ public sealed class SqlServerGraphHistoryReader
         return results;
     }
 
-    private DbCommand CreateHistoryCommand(DbConnection connection, Type entityType, bool isEdge)
+    private DbCommand CreateHistoryCommand(DbConnection connection, Type entityType, bool isEdge, Guid? fromId = null, Guid? toId = null, Guid? entityId = null)
     {
         var tableName = SqlGenerationHelpers.EscapeFullName(_schemaName, isEdge ? "GormEdgeHistory" : "GormNodeHistory");
         var command = connection.CreateCommand();
+        var edgeFilter = isEdge
+            ? (fromId.HasValue ? " AND [FromId] = @FromId" : string.Empty) +
+              (toId.HasValue ? " AND [ToId] = @ToId" : string.Empty) +
+              (entityId.HasValue ? " AND [EntityId] = @EntityId" : string.Empty)
+            : string.Empty;
         command.CommandText = isEdge
             ? $"""
                SELECT
@@ -111,7 +131,7 @@ public sealed class SqlServerGraphHistoryReader
                    [ToId],
                    [SnapshotJson]
                FROM {tableName}
-               WHERE [EntityType] = @EntityType
+               WHERE [EntityType] = @EntityType {edgeFilter}
                ORDER BY [CapturedAtUtc] ASC
                """
             : $"""
@@ -128,6 +148,12 @@ public sealed class SqlServerGraphHistoryReader
                ORDER BY [CapturedAtUtc] ASC
                """;
         AddParameter(command, "@EntityType", entityType.FullName ?? entityType.Name);
+        if (isEdge)
+        {
+            if (fromId.HasValue) AddParameter(command, "@FromId", fromId.Value);
+            if (toId.HasValue) AddParameter(command, "@ToId", toId.Value);
+            if (entityId.HasValue) AddParameter(command, "@EntityId", entityId.Value);
+        }
         return command;
     }
 

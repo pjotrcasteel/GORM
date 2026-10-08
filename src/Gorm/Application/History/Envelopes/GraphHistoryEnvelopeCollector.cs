@@ -1,5 +1,6 @@
 ﻿using Gorm.Application.Context;
 using Gorm.Application.Execution.InMemory;
+using Gorm.Application.History.Storage;
 using Gorm.Application.Tracking;
 using Gorm.Core.Primitives;
 
@@ -124,12 +125,12 @@ internal static class GraphHistoryEnvelopeCollector
                 break;
 
             case Edge edge:
-                yield return GraphHistoryEnvelope.ForEdge(
-                    storedEntity as Edge is { } storedEdge ? CloneEdge(context, storedEdge) : CloneEdge(context, edge),
-                    GraphHistoryOperationKind.Deleted,
-                    capturedAtUtc,
-                    capturedAtUtc,
-                    capturedAtUtc);
+                var storedEdge = storedEntity as Edge ?? FindRecordedEdge(context, edge);
+                var snapshot = CloneEdge(context, storedEdge ?? edge);
+                if (snapshot.FromId != Guid.Empty && snapshot.ToId != Guid.Empty)
+                {
+                    yield return GraphHistoryEnvelope.ForEdge(snapshot, GraphHistoryOperationKind.Deleted, capturedAtUtc, capturedAtUtc, capturedAtUtc);
+                }
                 break;
         }
     }
@@ -165,23 +166,31 @@ internal static class GraphHistoryEnvelopeCollector
 
     private static IEnumerable<Edge> FindMatchingEdges(GraphContext context, Type edgeType, Guid fromId, Guid toId)
     {
-        if (context.ExecutionEngine is not InMemoryGraphExecutionEngine inMemoryExecutionEngine)
+        if (context.ExecutionEngine is InMemoryGraphExecutionEngine engine)
         {
-            yield break;
-        }
-
-        if (!inMemoryExecutionEngine.Store.EdgesByType.TryGetValue(edgeType, out var bucket))
-        {
-            yield break;
-        }
-
-        foreach (var edge in bucket.Values)
-        {
-            if (edge.FromId == fromId && edge.ToId == toId)
+            if (engine.Store.EdgesByType.TryGetValue(edgeType, out var bucket))
             {
-                yield return edge;
+                foreach (var edge in bucket.Values)
+                {
+                    if (edge.FromId == fromId && edge.ToId == toId) yield return edge;
+                }
+            }
+            yield break;
+        }
+
+        if (SqlServerGraphHistoryReaderRegistry.TryGet(context, out var reader))
+        {
+            foreach (var state in reader.ReadActiveEdgeStates(edgeType, fromId, toId))
+            {
+                if (state.Snapshot is Edge edge) yield return edge;
             }
         }
+    }
+
+    private static Edge? FindRecordedEdge(GraphContext context, Edge edge)
+    {
+        if (edge.Id == Guid.Empty || !SqlServerGraphHistoryReaderRegistry.TryGet(context, out var reader)) return null;
+        return reader.ReadActiveEdgeStates(edge.GetType(), entityId: edge.Id).SingleOrDefault()?.Snapshot as Edge;
     }
 
     private static object? FindStoredEntity(GraphContext context, object entity)

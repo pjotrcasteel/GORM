@@ -32,3 +32,7 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 Test data uses unique identifiers; the entire SQL Server container is destroyed after the fixture. No private connection strings, external database or NuGet release are involved.
 
 See the [compatibility matrix](../../docs/compatibility.html) for a method-by-method evidence list and explicit outstanding gaps. The integration tests are not yet a comprehensive provider-parity or performance suite and do not certify all temporal/GraphRAG behavior.
+
+## Historical edge lifecycle (SQL Server 2022)
+
+The live integration suite verifies persisted connection, disconnection, explicit deletion, reconnection, parallel edge identities and transaction rollback with history. History queries reconstruct state from SQL Server's stored envelopes **in memory**, not via native temporal SQL graph queries. Histories for edges that existed before history recording was enabled and node-deletion cascade behavior remain outside the verified scope.
