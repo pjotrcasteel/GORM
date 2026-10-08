@@ -27,7 +27,7 @@ public sealed class SqlSpecificationGraphContext : GraphContext
         {
             b.ToTable("CharacteristicSpecifications");
             b.HasKey(x => x.Id);
-            b.Property(x => x.Name).HasMaxLength(200);
+            b.Property(x => x.Name).HasMaxLength(200).IsRequired();
             b.Property(x => x.Payload);
 
             b.HasOutgoingRelationship<CharacteristicSpecificationMapEdge, CharacteristicSpecificationNode>("MapsInto");

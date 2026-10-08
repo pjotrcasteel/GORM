@@ -104,9 +104,17 @@ The package identity is `GORM`, currently versioned at `3.1.0` from the reposito
 dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
 ```
 
-The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration tests remain a separate release gate.
+The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration runs as a separate GitHub Actions quality gate.
 
 Public source is licensed under the [MIT License](LICENSE). The package has **not** been published to NuGet.org. The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
+
+## SQL Server 2022 integration tests
+
+A separate [Testcontainers integration suite](tests/Gorm.SqlServer.Tests/README.md) provisions disposable SQL Server 2022, applies the database-first sample schema and verifies live schema mapping, node/edge persistence, outgoing/incoming traversals, transaction rollback and history recording. It requires Docker and does not run during the fast `dotnet test Gorm.sln` workflow.
+
+```bash
+dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release
+```
 
 ## Creator
 
