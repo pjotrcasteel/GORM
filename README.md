@@ -8,7 +8,7 @@
 
 GORM treats nodes and edges as first-class persistence concepts. It combines a LINQ-style query API, relationship-aware loading, change tracking and graph mutations with in-memory execution for tests and temporal graph history.
 
-> **Repository status:** GORM is an MIT-licensed .NET 10 project. The first public preview, `GORM 3.1.0-preview.1`, is published on NuGet.org and has passed a fresh, independent public-feed installation check. Stable `3.1.0` has **not** been published.
+> **Repository status:** GORM is an MIT-licensed .NET 10 project. The first public preview, `GORM 3.1.0-preview.1`, is the latest **published** package and has passed independent public-feed verification. The source tree is preparing `3.2.0-preview.1`; neither that candidate nor stable `3.2.0` is published yet.
 
 ## When GORM is useful
 
@@ -94,11 +94,11 @@ dotnet build Gorm.sln -c Release --no-restore
 dotnet test Gorm.sln -c Release --no-build
 ```
 
-The library has no RoutIT.Common dependency and uses public NuGet feeds. The public-source migration and validation status are documented in [SOURCE_MIGRATION.md](SOURCE_MIGRATION.md). The documentation playground remains a browser-side query preview rather than the compiled .NET runtime.
+The library has no RoutIT.Common dependency and uses public NuGet feeds. The public-source migration and validation status are documented in [SOURCE_MIGRATION.md](SOURCE_MIGRATION.md). The documentation Playground offers opt-in real GORM `Explain()` via client-side .NET WebAssembly for four verified presets; user edits and unsupported shapes remain visibly illustrative previews.
 
 ## Verify the NuGet package locally
 
-The package identity is `GORM`, currently versioned at `3.1.0` from the repository-wide `SemanticVersion.props`. To build a package without publishing:
+The package identity is `GORM`, now versioned at the **unpublished `3.2.0` source baseline** from the repository-wide `SemanticVersion.props`. To build a package without publishing:
 
 ```bash
 dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
@@ -106,7 +106,7 @@ dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
 
 The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration runs as a separate GitHub Actions quality gate.
 
-Public source is licensed under the [MIT License](LICENSE). The verified first public preview is [GORM 3.1.0-preview.1 on NuGet.org](https://www.nuget.org/packages/GORM/3.1.0-preview.1). The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
+Public source is licensed under the [MIT License](LICENSE). The verified first public preview is [GORM 3.1.0-preview.1 on NuGet.org](https://www.nuget.org/packages/GORM/3.1.0-preview.1). The website's Playground runs actual GORM `Explain()` for four opt-in .NET WebAssembly presets and labels all other JavaScript translations as illustrative.
 
 ## SQL Server 2022 integration tests
 
