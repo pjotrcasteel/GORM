@@ -128,6 +128,7 @@ public sealed class GraphSaveChangesExecutor
             var persistedNodeIds = new Dictionary<object, object?>(ReferenceEqualityComparer.Instance);
             var affectedRows = 0;
 
+            await LockDeletedNodesAsync(context, saveSet, connection, transaction, cancellationToken);
             affectedRows += await InsertAddedEntitiesAsync(context, saveSet, connection, transaction, persistedNodeIds, cancellationToken);
 
             affectedRows += await ProcessPendingEdgeConnectionsAsync(context, saveSet, connection, transaction, persistedNodeIds, cancellationToken);
@@ -137,6 +138,11 @@ public sealed class GraphSaveChangesExecutor
             affectedRows += await ProcessModifiedEntitiesAsync(context, saveSet, connection, transaction, cancellationToken);
 
             affectedRows += await DeleteIncidentEdgesForDeletedNodesAsync(context, saveSet, connection, transaction, cancellationToken);
+
+            if (saveSet.DeletedEntries.Any(x => x.Entity is Node) && context.AfterIncidentEdgeCleanupForTesting is { } afterCleanup)
+            {
+                await afterCleanup(cancellationToken);
+            }
 
             affectedRows += await ProcessDeletedEntitiesAsync(context, saveSet, connection, transaction, cancellationToken);
 
@@ -162,6 +168,36 @@ public sealed class GraphSaveChangesExecutor
             await RollbackIfNeededAsync(transaction, ownsTransaction, cancellationToken);
             throw;
         }
+    }
+
+    private static async Task LockDeletedNodesAsync(
+        GraphContext context,
+        GraphSaveChangesSet saveSet,
+        DbConnection connection,
+        DbTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        var deletedNodes = saveSet.DeletedEntries
+            .Where(entry => entry.Entity is Node)
+            .OrderBy(entry => entry.ClrType.FullName, StringComparer.Ordinal)
+            .ThenBy(entry => ((Node)entry.Entity).Id);
+
+        foreach (var entry in deletedNodes)
+        {
+            var plan = GraphSaveCommandPlanCache.GetNodePlan(context.Model.GetNode(entry.ClrType));
+            using var command = CreateCommand(connection, transaction, plan.LoadNodeIdCommandText);
+            AddParameter(command, plan.LoadNodeIdParameterNames[0], plan.KeyProperty.Get(entry.Entity));
+
+            // Missing non-versioned nodes retain existing no-op delete behavior.
+            // A live row is held with UPDLOCK/HOLDLOCK through edge cleanup and node removal.
+            await command.ExecuteScalarAsync(cancellationToken);
+        }
+    }
+
+    private static int CompareNodeLockOrder(Node left, Node right)
+    {
+        var typeComparison = string.Compare(left.GetType().FullName, right.GetType().FullName, StringComparison.Ordinal);
+        return typeComparison != 0 ? typeComparison : left.Id.CompareTo(right.Id);
     }
 
     private static async Task<int> InsertAddedEntitiesAsync(
@@ -266,12 +302,27 @@ public sealed class GraphSaveChangesExecutor
 
             SetInitialConcurrencyTokenIfNeeded(pendingEdge.Edge);
 
+            if (context.BeforeEdgeEndpointLookupForTesting is { } beforeLookup)
+            {
+                await beforeLookup(cancellationToken);
+            }
+
             var edgeMapping = context.Model.GetEdge(pendingEdge.Edge.GetType());
             var edgePlan = GraphSaveCommandPlanCache.GetEdgePlan(edgeMapping);
 
-            var fromNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.FromNode, cancellationToken);
-
-            var toNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.ToNode, cancellationToken);
+            // Acquire endpoint locks in a deterministic order so reversed-edge writers do not deadlock.
+            object? fromNodeId;
+            object? toNodeId;
+            if (CompareNodeLockOrder(pendingEdge.FromNode, pendingEdge.ToNode) <= 0)
+            {
+                fromNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.FromNode, cancellationToken);
+                toNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.ToNode, cancellationToken);
+            }
+            else
+            {
+                toNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.ToNode, cancellationToken);
+                fromNodeId = await GetOrLoadNodeIdAsync(connection, transaction, context, persistedNodeIds, pendingEdge.FromNode, cancellationToken);
+            }
 
             affectedRows += await InsertEdgeAsync(
                 new InsertEdgeAsyncParameters

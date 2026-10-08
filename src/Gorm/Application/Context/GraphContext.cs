@@ -1156,7 +1156,13 @@ public abstract class GraphContext
     {
         DetectChanges();
 
-        var historyCapture = await PrepareHistoryCaptureAsync(cancellationToken);
+        var historyCapture = await PrepareHistoryCaptureAsync(cancellationToken, deferSqlBatchCapture: true);
+
+        if (AfterHistoryPreparationForTesting is { } afterHistoryPreparation)
+        {
+            await afterHistoryPreparation(cancellationToken);
+        }
+
         var result = await _transactionCoordinator.SaveChangesAsync(
             this,
             ChangeTracker,
@@ -1169,8 +1175,22 @@ public abstract class GraphContext
         return result;
     }
 
-    private async Task<PreparedHistoryCapture> PrepareHistoryCaptureAsync(CancellationToken cancellationToken)
+    private async Task<PreparedHistoryCapture> PrepareHistoryCaptureAsync(CancellationToken cancellationToken, bool deferSqlBatchCapture = false)
     {
+        if (deferSqlBatchCapture && HistoryRecorder is IGraphHistoryBatchRecorder sqlBatchRecorder)
+        {
+            return new PreparedHistoryCapture(
+                (connection, transaction, token) =>
+                {
+                    // Defer until SaveChanges has acquired node locks and removed incident edges.
+                    // A competing edge writer that commits first is now included in the terminal history.
+                    var capturedAtUtc = HistoryTimeProvider.GetUtcNow().UtcDateTime;
+                    var envelopes = GraphHistoryEnvelopeCollector.Collect(this, ChangeTracker, capturedAtUtc);
+                    return sqlBatchRecorder.PersistAsync(envelopes, connection, transaction, token);
+                },
+                token => Task.CompletedTask);
+        }
+
         var capturedAtUtc = HistoryTimeProvider.GetUtcNow().UtcDateTime;
 
         if (HistoryRecorder is IGraphHistoryBatchRecorder batchRecorder)
@@ -1324,6 +1344,13 @@ public abstract class GraphContext
         ChangeTracker.Clear();
         InvalidateRelationshipState();
     }
+
+    // Internal, per-context deterministic interleaving points used only by SQL Server integration tests.
+    internal Func<CancellationToken, Task>? AfterIncidentEdgeCleanupForTesting { get; set; }
+
+    internal Func<CancellationToken, Task>? BeforeEdgeEndpointLookupForTesting { get; set; }
+
+    internal Func<CancellationToken, Task>? AfterHistoryPreparationForTesting { get; set; }
 
     /// <summary>
     /// Executes try get current transaction.
