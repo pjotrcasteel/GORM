@@ -171,6 +171,7 @@
       publishRun(query,result.ok);
     }catch(error){
       if(version!==runVersion)return;
+      renderEngineStatus(false);
       if(status)status.textContent='Translator contract failed';
       const output=document.querySelector('#sql-output code');
       if(output)output.textContent=`-- ${error instanceof Error?error.message:String(error)}`;
