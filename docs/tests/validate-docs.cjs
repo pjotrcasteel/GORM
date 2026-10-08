@@ -139,7 +139,7 @@ function validateCompatibilityEvidence() {
     if (entries.length < 10) fail('compatibility matrix must cite at least ten executable methods');
     const paths = new Set();
     for (const [, relativePath, method] of entries) {
-        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/SqlServerGraphIntegrationTests\.cs)$/.test(relativePath)) {
+        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/(?:SqlServerGraphIntegrationTests|SqlServerTransactionAndConcurrencyTests)\.cs)$/.test(relativePath)) {
             fail(`compatibility matrix: unexpected evidence source ${relativePath}`);
             continue;
         }
@@ -152,7 +152,15 @@ function validateCompatibilityEvidence() {
         if (!source.includes(`${method}(`)) fail(`compatibility matrix: missing executable method ${method} in ${relativePath}`);
         paths.add(relativePath);
     }
-    if (paths.size !== 2) fail('compatibility matrix must distinguish the NuGet cookbook and live SQL Server tests');
+    const requiredSources = [
+        'samples/Gorm.Cookbook/Program.cs',
+        'tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs',
+        'tests/Gorm.SqlServer.Tests/SqlServerTransactionAndConcurrencyTests.cs'
+    ];
+    for (const source of requiredSources) {
+        if (!paths.has(source)) fail(`compatibility matrix: missing required evidence source ${source}`);
+    }
+    if (paths.size !== requiredSources.length) fail('compatibility matrix must use exactly the three approved evidence sources');
     console.log(`Checked ${entries.length} compatibility matrix evidence links.`);
 }
 

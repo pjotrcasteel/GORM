@@ -85,6 +85,18 @@ public sealed partial class SqlServerGraphIntegrationTests
             );
             """;
         await historySchema.ExecuteNonQueryAsync(context.CancellationToken);
+
+        // Dedicated database-first node table for real optimistic concurrency verification.
+        await using var concurrencySchema = schemaConnection.CreateCommand();
+        concurrencySchema.CommandText = """
+            CREATE TABLE [dbo].[VersionedGraphNodes]
+            (
+                [Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+                [Name] NVARCHAR(200) NOT NULL,
+                [Version] INT NOT NULL
+            ) AS NODE;
+            """;
+        await concurrencySchema.ExecuteNonQueryAsync(context.CancellationToken);
     }
 
     [ClassCleanup]

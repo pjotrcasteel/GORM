@@ -151,7 +151,32 @@ public sealed class GraphTransactionAndStateTests
         var name = await graphTransaction.CreateSavepointAsync(null, TestContext.CancellationToken);
 
         Assert.IsTrue(name.StartsWith("gorm_sp_", StringComparison.Ordinal));
+        Assert.IsLessThanOrEqualTo(name.Length, 32, "SQL Server savepoint identifiers may be at most 32 characters.");
         Assert.Contains($"SAVE TRANSACTION [{name}]", connection.ExecutedCommandTexts);
+    }
+
+    [TestMethod]
+    public async Task GraphTransaction_CreateSavepointAsync_Rejects_Name_Over_SqlServerLimit()
+    {
+        var connection = new TxFakeDbConnection();
+        var transaction = new TxFakeDbTransaction(connection);
+        var context = new TxGraphContext(new TxFakeConnectionFactory(connection));
+        await using var graphTransaction = new GraphTransaction(context, connection, transaction, savepointName: null, ownsTransaction: false);
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            graphTransaction.CreateSavepointAsync(new string('x', 33), TestContext.CancellationToken));
+    }
+
+    [TestMethod]
+    public async Task GraphTransaction_RollbackToSavepointAsync_Rejects_Name_Over_SqlServerLimit()
+    {
+        var connection = new TxFakeDbConnection();
+        var transaction = new TxFakeDbTransaction(connection);
+        var context = new TxGraphContext(new TxFakeConnectionFactory(connection));
+        await using var graphTransaction = new GraphTransaction(context, connection, transaction, savepointName: null, ownsTransaction: false);
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            graphTransaction.RollbackToSavepointAsync(new string('x', 33), TestContext.CancellationToken));
     }
 
     [TestMethod]

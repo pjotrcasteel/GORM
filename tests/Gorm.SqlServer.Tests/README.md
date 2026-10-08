@@ -22,6 +22,9 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 - Executes server-side `StartsWith` filters, deterministic `OrderBy/Skip/Take` paging, `CountAsync`, `LongCountAsync` and `AnyAsync`
 - Traverses two stored graph edges using `ThenOutgoing` and verifies the second-hop result
 - Commits an explicit SQL transaction and reloads the written node from a new connection
+- Verifies nested transactions roll back to SQL Server savepoints without discarding outer writes
+- Verifies explicit named savepoint rollback with additional writes after rollback
+- Verifies optimistic concurrency on a dedicated versioned SQL Graph table using independent contexts: stale update/delete and sequential version increments
 
 Test data uses unique identifiers; the entire SQL Server container is destroyed after the fixture. No private connection strings, external database or NuGet release are involved.
 
