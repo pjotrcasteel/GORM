@@ -14,7 +14,7 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 
 ## Coverage
 
-- Detects SQL Server schema mismatch against a DBA-style script
+- Validates mapped SQL Server columns and nullability against a DBA-style schema
 - Persists and reloads nodes through separate GORM contexts
 - Persists SQL Server Graph edges; traverses outgoing and incoming relationships
 - Rolls back a GORM transaction and verifies no data was committed
