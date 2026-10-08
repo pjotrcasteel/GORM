@@ -2,6 +2,9 @@
 using System.Text.Json;
 using Gorm.Core.Primitives;
 using Gorm.Application.History.Envelopes;
+using Gorm.Application.Temporal.Bitemporal;
+using Gorm.Application.Temporal.History;
+using Gorm.Core.Primitives;
 using Gorm.Application.History;
 using Gorm.Infrastructure.Persistence.Connections;
 using Gorm.Infrastructure.Providers.SqlServer.Helpers;
@@ -74,6 +77,35 @@ public sealed class SqlServerGraphHistoryReader
     }
 
     internal sealed record EdgeHistoryState(Guid Id, object Snapshot);
+
+    /// <summary>
+    /// Captures a detached bitemporal dataset from SQL Server node and edge history.
+    /// Each table is read separately; callers requiring a single consistent transactional read
+    /// must coordinate concurrent history writers outside this convenience method.
+    /// </summary>
+    /// <typeparam name="TNode">The history node type.</typeparam>
+    /// <typeparam name="TEdge">The history edge type.</typeparam>
+    /// <param name="maximumHistoryEntries">Maximum total number of node and edge envelopes to materialize.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A bounded, detached dataset that supports valid-time and recorded-time projections.</returns>
+    public async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
+        int maximumHistoryEntries = 1_000_000,
+        CancellationToken cancellationToken = default)
+        where TNode : Node
+        where TEdge : Edge
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumHistoryEntries);
+        var nodes = await ReadNodeHistoryAsync<TNode>(cancellationToken);
+        if (nodes.Count > maximumHistoryEntries)
+        {
+            throw new GraphWorldHistoryProjectionException(
+                GraphWorldHistoryProjectionFailureReason.EntryLimitExceeded,
+                $"Node history exceeded {nameof(maximumHistoryEntries)} ({maximumHistoryEntries}).");
+        }
+
+        var edges = await ReadEdgeHistoryAsync<TEdge>(cancellationToken);
+        return GraphWorldHistoryDataset.Capture(nodes.Concat(edges), maximumHistoryEntries, cancellationToken);
+    }
 
     private List<GraphHistoryEnvelope> ReadHistory(Type entityType, bool isEdge, Guid? fromId = null, Guid? toId = null, Guid? entityId = null)
     {

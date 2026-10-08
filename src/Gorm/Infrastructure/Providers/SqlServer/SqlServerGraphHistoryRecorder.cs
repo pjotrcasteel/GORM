@@ -61,6 +61,16 @@ public sealed class SqlServerGraphHistoryRecorder : IGraphHistoryBatchRecorder
         ArgumentNullException.ThrowIfNull(envelopes);
         cancellationToken.ThrowIfCancellationRequested();
 
+        // Validate the full batch before opening a transaction or inserting any history rows.
+        foreach (var envelope in envelopes)
+        {
+            ArgumentNullException.ThrowIfNull(envelope);
+            if (envelope.ValidToUtc is { } validTo && validTo < envelope.ValidFromUtc)
+            {
+                throw new ArgumentException("History ValidToUtc cannot precede ValidFromUtc.", nameof(envelopes));
+            }
+        }
+
         if (connection is null && transaction is null)
         {
             return envelopes.Count == 0
