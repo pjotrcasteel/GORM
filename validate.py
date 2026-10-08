@@ -7,6 +7,12 @@ required = [
     "README.md",
     "LICENSE",
     "RELEASING.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    ".github/BRANCH_PROTECTION.md",
+    ".github/pull_request_template.md",
+    ".github/releases/3.1.0-preview.1.md",
+    ".github/workflows/first-github-prerelease.yml",
     ".github/workflows/verify-public-nuget.yml",
     ".github/workflows/nuget-preview.yml",
     ".github/scripts/verify_package_consumer.sh",
@@ -103,4 +109,11 @@ for token in ("<PackageId>GORM</PackageId>", "<PackageLicenseExpression>MIT</Pac
         raise SystemExit(f"Missing GORM package metadata: {token}")
 if "MIT License" not in (ROOT / "LICENSE").read_text(encoding="utf-8"):
     raise SystemExit("Missing MIT license text.")
-print("GORM public site and independent .NET source layout and package metadata validated (NuGet release separate).")
+# The one-time GitHub release may create a public source tag, but must never republish NuGet.
+first_release = (ROOT / ".github/workflows/first-github-prerelease.yml").read_text(encoding="utf-8")
+for guard in ("gh release create", "--target", "--prerelease", "contents: write", "verify_package_consumer.sh"):
+    if guard not in first_release:
+        raise SystemExit(f"GitHub prerelease provenance guard missing: {guard}")
+if "dotnet nuget push" in first_release or "nuget push" in first_release:
+    raise SystemExit("GitHub prerelease workflow must not publish NuGet packages.")
+print("GORM public site, release governance, package metadata and independent source layout validated.")

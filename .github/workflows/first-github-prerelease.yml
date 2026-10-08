@@ -1,0 +1,64 @@
+name: Publish first GORM GitHub prerelease
+
+# One-time source-tagging companion for the already-published NuGet preview.
+# Automatically runs only when THIS workflow first enters main. Idempotent when rerun.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/first-github-prerelease.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gorm-first-github-prerelease
+  cancel-in-progress: false
+
+jobs:
+  github-prerelease:
+    name: Verify NuGet and create source-pinned GitHub prerelease
+    if: github.ref == 'refs/heads/main' && github.repository == 'pjotrcasteel/GORM'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate immutable release provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha="082c1b878fc9ab896d874f1940ccc45b58752b52"
+          git cat-file -e "${source_sha}^{commit}"
+          git merge-base --is-ancestor "$source_sha" "$GITHUB_SHA"
+          test -f .github/releases/3.1.0-preview.1.md
+      - name: Independently verify published NuGet package
+        run: bash .github/scripts/verify_package_consumer.sh 3.1.0-preview.1 unused public
+      - name: Create GitHub prerelease exactly once (no NuGet publishing)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v3.1.0-preview.1"
+          source_sha="082c1b878fc9ab896d874f1940ccc45b58752b52"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub prerelease $tag already exists. No changes made."
+            exit 0
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+            echo "::error::Tag $tag already exists without a release. Inspect it instead of overwriting."
+            exit 1
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+            --target "$source_sha" --prerelease \
+            --title "GORM 3.1.0-preview.1" \
+            --notes-file .github/releases/3.1.0-preview.1.md
+          echo "Created immutable, source-pinned GitHub prerelease $tag" >> "$GITHUB_STEP_SUMMARY"

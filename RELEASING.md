@@ -1,6 +1,6 @@
-# First GORM NuGet preview
+# GORM release process
 
-The first preview candidate is **GORM 3.1.0-preview.1** targeting **.NET 10**. The project is MIT licensed. The repository's `SemanticVersion.props` remains `3.1.0`; the preview suffix is applied as an explicit build-time version, without changing the normal stable version.
+**The first preview, GORM 3.1.0-preview.1, was uploaded to NuGet.org and independently installed from the public feed.** See [verification run #37825476545](https://github.com/pjotrcasteel/GORM/actions/runs/37825476545). The repository's `SemanticVersion.props` remains `3.1.0`; prerelease suffixes are supplied as explicit build-time versions. The project is MIT licensed and targets .NET 10.
 
 ## Quality gates
 
@@ -14,9 +14,9 @@ The [preview workflow](.github/workflows/nuget-preview.yml) runs these independe
 
 Pull requests run the checks, **never publish**, and provide an artifact. A manual workflow run with `publish = false` builds a candidate without publishing. The workflow never releases automatically on a merge.
 
-## One-time NuGet.org setup
+## Trusted Publishing configuration (already configured for this repository)
 
-1. Sign in at [NuGet.org](https://www.nuget.org/) (create an account if needed). Confirm package ID `GORM` is available or owned by you. **If it belongs to someone else, don't attempt publication.**
+1. Sign in at [NuGet.org](https://www.nuget.org/) as the existing package owner `PjotrCasteel` and check the `GORM` package details.
 2. Under the NuGet.org account's **Trusted Publishing** settings, create a GitHub Actions policy with repository owner `pjotrcasteel`, repository `GORM`, workflow filename `nuget-preview.yml`, and environment `nuget-preview`.
 3. Under the GitHub repository **Settings > Environments**, create `nuget-preview`, preferably with required-reviewer approval and a deployment branch restriction to `main`.
 4. The workflow already uses the public NuGet.org profile name `PjotrCasteel`; no `NUGET_USER` variable or persistent API key is necessary.
@@ -31,11 +31,11 @@ The publish job uses [NuGet/login@v1](https://github.com/NuGet/login) to exchang
 3. When NuGet Trusted Publishing and the `nuget-preview` GitHub environment have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.1.0-preview.1` in the confirmation field.
 4. Publication runs only after both the full package gate and the live SQL Server gate pass. It checks the version is not already registered, obtains short-lived credentials and pushes the immutable package and symbols. A **successful publish job confirms that NuGet accepted the upload**, not that public-feed indexing has completed.
 5. Run the separate [GORM public NuGet verification](.github/workflows/verify-public-nuget.yml) workflow from `main` for the published version. It polls the NuGet flat-container registry and restores/runs an independent .NET 10 consumer **using only NuGet.org**. It can be rerun safely: it never publishes anything.
-6. Once public verification succeeds, create a corresponding GitHub prerelease/tag. This is not automated by the workflow.
+6. After successful public verification, create the matching GitHub prerelease/tag. For the **first preview only**, the guarded [first GitHub prerelease workflow](.github/workflows/first-github-prerelease.yml) creates `v3.1.0-preview.1` pointing to the exact source commit that produced the published package (`082c1b878fc9ab896d874f1940ccc45b58752b52`), not to a later documentation/CI commit. Subsequent versions require an explicit release workflow or maintainer action.
 
 NuGet versions are immutable: **publishing is irreversible**. The public package name may already be owned; only NuGet.org can definitively accept or reject the attempted claim. Do not publish from a branch other than `main`.
 
-After the preview is actually published:
+The verified public preview can be installed using:
 
 ```bash
 dotnet add package GORM --version 3.1.0-preview.1
@@ -46,3 +46,13 @@ A GitHub Actions candidate artifact is **not** a NuGet.org publication. If publi
 ## Future work
 
 Before a stable release, expand SQL Server provider-parity coverage, security and performance testing, provenance/attestation, and real-engine website Playground integration.
+
+## Published preview record
+
+- NuGet.org: https://www.nuget.org/packages/GORM/3.1.0-preview.1
+- Release package/source commit: `082c1b878fc9ab896d874f1940ccc45b58752b52`
+- NuGet push: HTTP 201 for both package and symbols (the first publishing workflow timed out only while waiting for indexing)
+- Public consumer verification: https://github.com/pjotrcasteel/GORM/actions/runs/37825476545 — succeeded
+- Matching GitHub prerelease: tag `v3.1.0-preview.1`, created by the one-time GitHub release workflow upon merge of its workflow into `main` (only if source and public install checks pass). Do not re-tag or publish the NuGet package.
+
+The first publication's original GitHub workflow conclusion was **failure**, because NuGet.org indexing exceeded its original wait window. The two HTTP 201 uploads were successful and the later independent verification passed. This is why upload and public verification are now distinct workflows.
