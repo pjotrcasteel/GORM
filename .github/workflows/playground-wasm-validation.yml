@@ -1,0 +1,42 @@
+name: Playground real GORM WebAssembly
+on:
+  pull_request:
+    paths:
+      - 'samples/Gorm.Playground.*/**'
+      - 'src/**'
+      - '.github/workflows/playground-wasm-validation.yml'
+      - 'Directory.*.props'
+  push:
+    branches: [main]
+    paths:
+      - 'samples/Gorm.Playground.*/**'
+      - 'src/**'
+      - '.github/workflows/playground-wasm-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-gorm-wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run native reference GORM Explain assertions
+        run: dotnet run --project samples/Gorm.Playground.Verify/Gorm.Playground.Verify.csproj -c Release
+      - name: Install .NET WASM tools
+        run: dotnet workload install wasm-tools
+      - name: Publish real GORM WebAssembly
+        run: dotnet publish samples/Gorm.Playground.Browser/Gorm.Playground.Browser.csproj -c Release
+      - name: Verify published browser assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          dir="samples/Gorm.Playground.Browser/bin/Release/net10.0/browser-wasm/publish"
+          test -f "$dir/_framework/dotnet.js"
+          find "$dir/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
+          find "$dir/_framework" -type f -iname '*Gorm*' -print | head -10
