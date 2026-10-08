@@ -39,6 +39,8 @@ jobs:
         run: dotnet test Gorm.sln -c Release --no-build
       - name: Run documented getting-started sample from public NuGet
         run: dotnet run --project samples/Gorm.GettingStarted/Gorm.GettingStarted.csproj -c Release
+      - name: Run verified public-NuGet cookbook
+        run: dotnet run --project samples/Gorm.Cookbook/Gorm.Cookbook.csproj -c Release
       - name: Pack without publishing
         shell: bash
         run: |

@@ -16,6 +16,14 @@ Run the [public-package getting-started sample](samples/Gorm.GettingStarted/READ
 dotnet run --project samples/Gorm.GettingStarted/Gorm.GettingStarted.csproj -c Release
 ```
 
+## Verified cookbook and coverage
+
+```bash
+dotnet run --project samples/Gorm.Cookbook/Gorm.Cookbook.csproj -c Release
+```
+
+The cookbook uses the **published NuGet package**, not a project reference. When public API documentation changes, update this executable sample and the [evidence-based provider matrix](docs/compatibility.html). Do not mark a feature SQL Server verified without a linked live integration test.
+
 ## Build and test
 
 ```bash

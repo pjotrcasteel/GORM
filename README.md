@@ -126,6 +126,16 @@ dotnet run --project samples/Gorm.GettingStarted/Gorm.GettingStarted.csproj -c R
 
 The sample runs the real GORM package without a hosted service, paid infrastructure, SQL Server or a project reference. For database-backed persistence, continue to the [SQL Server demo](samples/Gorm.Demo/README.md).
 
+## Verified cookbook and compatibility
+
+The [public-NuGet cookbook](samples/Gorm.Cookbook/README.md) is an executable collection of real GORM examples: typed outgoing/incoming traversals, multi-hop paths, `Include`, LINQ paging and the compiled `Explain()` SQL translator.
+
+```bash
+dotnet run --project samples/Gorm.Cookbook/Gorm.Cookbook.csproj -c Release
+```
+
+The [evidence-backed compatibility matrix](docs/compatibility.html) separates **tested SQL Server 2022 behavior** from **public-package in-memory behavior** and explicitly lists missing test coverage. Both the cookbook and SQL Server integration tests are part of PR CI.
+
 ## Install the public preview
 
 Install [GORM 3.1.0-preview.1](https://www.nuget.org/packages/GORM/3.1.0-preview.1) in a .NET 10 project:
