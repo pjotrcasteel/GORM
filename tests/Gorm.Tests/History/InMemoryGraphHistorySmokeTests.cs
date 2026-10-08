@@ -145,6 +145,39 @@ public sealed class InMemoryGraphHistorySmokeTests
     }
 
     [TestMethod]
+    public async Task EdgeHistory_DeletingConnectedNode_RemovesEdgeAndRecordsTerminalSnapshot()
+    {
+        var store = new InMemoryGraphStore();
+        var historyStore = new InMemoryGraphHistoryStore();
+        var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
+        var context = new DemoHistoryGraphContext().UseInMemory(store, historyStore);
+        context.UseTimeProvider(clock);
+
+        var person = new PersonNode { Id = Guid.NewGuid(), Name = "Alice" };
+        var project = new ProjectNode { Id = Guid.NewGuid(), Code = "Project" };
+        context.Add(person);
+        context.Add(project);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+        var edge = context.Connect<WorksOnEdge, PersonNode, ProjectNode>(person, project);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+        var beforeDelete = clock.GetUtcNow().UtcDateTime;
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        context.Remove(person);
+        await context.SaveChangesAsync(TestContext.CancellationToken);
+
+        var history = context.EdgeHistory<WorksOnEdge>().Where(x => x.EntityId == edge.Id).OrderBy(x => x.CapturedAtUtc).ToArray();
+        Assert.HasCount(2, history);
+        Assert.AreEqual(GraphHistoryOperationKind.Connected, history[0].OperationKind);
+        Assert.AreEqual(GraphHistoryOperationKind.Deleted, history[1].OperationKind);
+        Assert.AreEqual(person.Id, history[1].FromId);
+        Assert.AreEqual(project.Id, history[1].ToId);
+        Assert.IsEmpty(store.EdgesByType[typeof(WorksOnEdge)].Values);
+        Assert.HasCount(1, context.History<PersonNode>().AsOf(beforeDelete).Where(x => x.EntityId == person.Id)
+            .TemporalOutgoing<WorksOnEdge, ProjectNode>(context).ToList());
+    }
+
+    [TestMethod]
     public async Task AsOf_Returns_The_Node_Snapshot_Valid_At_The_Specified_Time()
     {
         var store = new InMemoryGraphStore();
