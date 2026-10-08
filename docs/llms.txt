@@ -18,6 +18,7 @@ Canonical repository: https://github.com/pjotrcasteel/GORM
 - API reference: https://pjotrcasteel.github.io/GORM/reference.html
 - Interactive graph model explorer: https://pjotrcasteel.github.io/GORM/graph-explorer.html
 - Interactive LINQ to SQL playground: https://pjotrcasteel.github.io/GORM/playground.html
+- Verified NuGet-only getting-started sample: https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.GettingStarted
 
 ## Core model
 
@@ -39,30 +40,30 @@ GORM query code blocks in the documentation can open directly in the playground.
 
 The Graph Model Explorer is a visual learning tool for graph topology and traversal direction. A user chooses a root node and follows typed edges; the explorer emits the equivalent Outgoing<TEdge,TTarget>() or Incoming<TEdge,TSource>() chain and a matching SQL Server Graph shape. Generated explorer queries can open directly in the playground for further editing and translation inspection.
 
-The playground supports shareable custom-query permalinks. A permalink preserves the editor query so it can be used in documentation, issue reports and pull request discussions. It does not imply that the generated SQL is authoritative runtime output while the real translator is still pending source migration.
+The playground supports shareable custom-query permalinks. A permalink preserves the editor query so it can be used in documentation, issue reports and pull request discussions. The browser's generated SQL is illustrative, not authoritative output from the published GORM query translator.
 
 ## Advanced capabilities
 
-Implementation materials also describe deeper capabilities over the same GORM graph runtime:
+The public GORM runtime also implements deeper capabilities:
 - Graph Intelligence for centrality, routing, components, communities and impact analysis;
 - Temporal Digital Twin simulation and isolated what-if scenarios;
 - Explainable GraphRAG with path-aware graph evidence and explicit security boundaries;
 - Helix query analysis, generated SQL inspection and safe optimization;
 - a ChangeSet and transaction compiler for inspectable ordered writes, rollback semantics and concurrency conflicts.
 
-These are documented as capabilities, not as guaranteed public signatures. Exact namespaces, method signatures and package boundaries must be validated after source migration.
+These capabilities are present in the public source, but exact method signatures must be checked against the current preview package. Stable compatibility is not guaranteed.
 
 ## Playground status
 
-The public repository does not yet contain the migrated GORM expression visitor and SQL generator. The browser playground is therefore explicitly a documentation preview translator for focused query shapes. It visualizes query anatomy, translation stages, bind parameters, diagnostics and expected SQL Server Graph concepts but must not be treated as the production translator.
+The public repository now contains GORM's actual expression visitor and SQL generator. The browser Playground has not yet integrated them: its JavaScript preview translator models focused query shapes and is not authoritative. It visualizes query anatomy, translation stages, bind parameters, diagnostics and expected SQL Server Graph concepts but must not be treated as the production translator.
 
-The playground UI is intentionally separated from the translator implementation. `playground-adapter.js` resolves an optional `window.GormPlaygroundEngine` and otherwise falls back to `playground-preview-engine.js`. A translator exposes metadata plus `translate(query)` and returns an object containing at least `ok`, `sql` and `model`; `notes` is optional UI context. This is the integration boundary the migrated .NET translator should implement through a sandboxed adapter.
+The playground UI is intentionally separated from the translator implementation. `playground-adapter.js` resolves an optional `window.GormPlaygroundEngine` and otherwise falls back to `playground-preview-engine.js`. A translator exposes metadata plus `translate(query)` and returns an object containing at least `ok`, `sql` and `model`; `notes` is optional UI context. This is the integration boundary for the planned free client-side integration of the actual .NET translator.
 
 Six documentation contracts cover outgoing traversal, incoming traversal, chained traversal, filter/paging, temporal AsOf and Include. CI validates JavaScript syntax, internal documentation links/routes and these translator contracts on pull requests and main-branch documentation changes.
 
 ## Repository status
 
-The public repository identity is GORM. Implementation source migration and NuGet publication are intentionally deferred until organization-specific naming is removed, public symbols are validated and the complete .NET 10 build/test/performance suite is green.
+The GORM source is public and GORM 3.1.0-preview.1 is published on NuGet.org. Independent public-feed restoration and execution succeeded in GitHub Actions. The codebase and website are still evolving; the Playground is not yet the real translator.
 
 ## Boundary
 

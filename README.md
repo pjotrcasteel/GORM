@@ -116,6 +116,16 @@ A separate [Testcontainers integration suite](tests/Gorm.SqlServer.Tests/README.
 dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release
 ```
 
+## Your first GORM graph (no SQL Server required)
+
+The fastest verified way to try real GORM is the [NuGet-only getting-started sample](samples/Gorm.GettingStarted/README.md). It creates two nodes and an edge, saves them in memory, follows a typed relationship and prints SQL from GORM's actual `Explain()` implementation. It is run automatically by GitHub Actions for every pull request.
+
+```bash
+dotnet run --project samples/Gorm.GettingStarted/Gorm.GettingStarted.csproj -c Release
+```
+
+The sample runs the real GORM package without a hosted service, paid infrastructure, SQL Server or a project reference. For database-backed persistence, continue to the [SQL Server demo](samples/Gorm.Demo/README.md).
+
 ## Install the public preview
 
 Install [GORM 3.1.0-preview.1](https://www.nuget.org/packages/GORM/3.1.0-preview.1) in a .NET 10 project:
