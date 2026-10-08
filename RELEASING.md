@@ -29,8 +29,9 @@ The publish job uses [NuGet/login@v1](https://github.com/NuGet/login) to exchang
 1. Merge the release preparation PR after all GitHub Actions checks pass.
 2. Go to GitHub > **Actions** > **GORM NuGet preview release** > **Run workflow**, using `main`, `version = 3.1.0-preview.1`, and `publish = false`. Inspect the uploaded packages and checks.
 3. When NuGet Trusted Publishing and the `nuget-preview` GitHub environment have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.1.0-preview.1` in the confirmation field.
-4. Publication runs only after both the full package gate and the live SQL Server gate pass. It checks the version is not registered, requests short-lived credentials, pushes the package plus symbols, then retries a fresh consumer restore **using only NuGet.org**.
-5. Once the public verification succeeds, create a corresponding GitHub prerelease/tag. This is not automated by the workflow.
+4. Publication runs only after both the full package gate and the live SQL Server gate pass. It checks the version is not already registered, obtains short-lived credentials and pushes the immutable package and symbols. A **successful publish job confirms that NuGet accepted the upload**, not that public-feed indexing has completed.
+5. Run the separate [GORM public NuGet verification](.github/workflows/verify-public-nuget.yml) workflow from `main` for the published version. It polls the NuGet flat-container registry and restores/runs an independent .NET 10 consumer **using only NuGet.org**. It can be rerun safely: it never publishes anything.
+6. Once public verification succeeds, create a corresponding GitHub prerelease/tag. This is not automated by the workflow.
 
 NuGet versions are immutable: **publishing is irreversible**. The public package name may already be owned; only NuGet.org can definitively accept or reject the attempted claim. Do not publish from a branch other than `main`.
 
@@ -40,7 +41,7 @@ After the preview is actually published:
 dotnet add package GORM --version 3.1.0-preview.1
 ```
 
-A GitHub Actions candidate artifact is **not** a NuGet.org publication.
+A GitHub Actions candidate artifact is **not** a NuGet.org publication. If publication receives HTTP `201 Created` but public verification reports `NU1101`, NuGet.org is likely still validating/indexing the package. **Do not rerun the publishing workflow for the same version.** Use the verification-only workflow and check NuGet.org's package-management status.
 
 ## Future work
 

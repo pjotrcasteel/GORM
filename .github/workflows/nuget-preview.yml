@@ -161,19 +161,15 @@ jobs:
           test -f "$RUNNER_TEMP/gorm-preview/GORM.$RELEASE_VERSION.snupkg"
           dotnet nuget push "$RUNNER_TEMP/gorm-preview/GORM.$RELEASE_VERSION.nupkg" \
             --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY"
-      - name: Verify external consumer restores from NuGet.org
+      - name: Record successful NuGet upload
         shell: bash
         env:
           RELEASE_VERSION: ${{ needs.candidate.outputs.version }}
         run: |
-          set -euo pipefail
-          for attempt in {1..12}; do
-            if bash .github/scripts/verify_package_consumer.sh "$RELEASE_VERSION" unused public; then
-              echo "Verified GORM $RELEASE_VERSION from NuGet.org"
-              exit 0
-            fi
-            echo "NuGet indexing / public restore not ready, attempt $attempt of 12"
-            sleep 15
-          done
-          echo "::error::Package was pushed, but verification against NuGet.org did not pass."
-          exit 1
+          {
+            echo "### GORM $RELEASE_VERSION uploaded to NuGet.org"
+            echo ""
+            echo "NuGet.org accepted the package and symbols. Public availability is asynchronous."
+            echo "Run **GORM public NuGet verification** later to check an independent consumer restore."
+            echo "Do **not** rerun the publish workflow for this immutable version."
+          } >> "$GITHUB_STEP_SUMMARY"

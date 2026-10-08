@@ -1,0 +1,83 @@
+name: GORM public NuGet verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-public-nuget.yml'
+      - '.github/scripts/verify_package_consumer.sh'
+      - '.github/verification/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-public-nuget.yml'
+      - '.github/scripts/verify_package_consumer.sh'
+      - '.github/verification/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Previously published GORM prerelease version to verify (never publishes)'
+        type: string
+        required: true
+        default: '3.1.0-preview.1'
+
+permissions:
+  contents: read
+
+jobs:
+  public-consumer:
+    name: Restore and run isolated public consumer
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate verification script on pull requests
+        if: github.event_name == 'pull_request'
+        run: bash -n .github/scripts/verify_package_consumer.sh
+      - name: Wait for NuGet.org registration and verify installed package
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${REQUESTED_VERSION:-3.1.0-preview.1}"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-preview\.[1-9][0-9]*$ ]]; then
+            echo "::error::Expected a version like 3.1.0-preview.1"
+            exit 1
+          fi
+
+          # NuGet package validation/indexing can outlast the OIDC upload. This job NEVER publishes.
+          for attempt in {1..20}; do
+            if GORM_VERSION="$version" python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          version = os.environ["GORM_VERSION"].lower()
+          url = "https://api.nuget.org/v3-flatcontainer/gorm/index.json"
+          try:
+              with urllib.request.urlopen(url, timeout=20) as response:
+                  found = version in [item.lower() for item in json.load(response).get("versions", [])]
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              found = False
+          if not found:
+              raise SystemExit(f"GORM {version} is not yet available in the public NuGet flat-container registry.")
+          print(f"Public NuGet registry lists GORM {version}.")
+          PY
+            then
+              if bash .github/scripts/verify_package_consumer.sh "$version" unused public; then
+                echo "### GORM $version independently verified from NuGet.org" >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+            fi
+            echo "Public NuGet validation pending; attempt $attempt/20. Never rerun the upload."
+            sleep 30
+          done
+          echo "::error::NuGet.org upload may still be validating. Verify the package status on NuGet.org; rerun this verification-only workflow later."
+          exit 1

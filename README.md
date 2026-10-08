@@ -118,7 +118,7 @@ dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release
 
 ## First NuGet preview
 
-The candidate version is `GORM 3.1.0-preview.1`. A separate [preview release workflow](.github/workflows/nuget-preview.yml) verifies a locally produced NuGet package, tests a clean consumer and gates release on real SQL Server 2022 integration tests. Publishing is opt-in and uses NuGet.org Trusted Publishing with a short-lived GitHub OIDC credential.
+The candidate version is `GORM 3.1.0-preview.1`. A separate [preview release workflow](.github/workflows/nuget-preview.yml) verifies a locally produced NuGet package, tests a clean consumer and gates release on real SQL Server 2022 integration tests. After NuGet accepts the package, the [public-feed verification workflow](.github/workflows/verify-public-nuget.yml) checks installability without attempting to publish again. Publishing is opt-in and uses NuGet.org Trusted Publishing with a short-lived GitHub OIDC credential.
 
 See [RELEASING.md](RELEASING.md) for setup, safety gates and the publication procedure. Neither merging a PR nor generating a GitHub artifact publishes the package.
 
