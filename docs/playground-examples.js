@@ -11,14 +11,14 @@
       key:'incoming',
       id:'incoming-one-hop',
       label:'Incoming traversal',
-      query:`var dependents = await context.Set<ServiceNode>()\n    .Where(x => x.Id == databaseId)\n    .Incoming<DependsOnEdge, ServiceNode>()\n    .ToListAsync();`,
-      expect:{root:'ServiceNode',hops:1,result:'ServiceNode',sql:['MATCH','DependsOnEdge','@databaseId']}
+      query:`var dependents = await context.Set<DatabaseNode>()\n    .Where(x => x.Id == databaseId)\n    .Incoming<DependsOnEdge, ServiceNode>()\n    .ToListAsync();`,
+      expect:{root:'DatabaseNode',hops:1,result:'ServiceNode',sql:['MATCH','DependsOnEdge','@databaseId']}
     },
     {
       key:'chained',
       id:'two-hop-outgoing',
       label:'Two-hop traversal',
-      query:`var databases = await context.Set<ServiceNode>()\n    .Where(x => x.Id == gatewayId)\n    .Outgoing<RoutesToEdge, ServiceNode>()\n    .Outgoing<DependsOnEdge, DatabaseNode>()\n    .ToListAsync();`,
+      query:`var databases = await context.Set<ServiceNode>()\n    .Where(x => x.Id == gatewayId)\n    .Outgoing<RoutesToEdge, ServiceNode>()\n    .ThenOutgoing<DependsOnEdge, DatabaseNode>()\n    .ToListAsync();`,
       expect:{root:'ServiceNode',hops:2,result:'DatabaseNode',sql:['RoutesToEdge','DependsOnEdge','node2.*']}
     },
     {
