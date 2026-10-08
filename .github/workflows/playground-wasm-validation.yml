@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          dir="samples/Gorm.Playground.Browser/bin/Release/net10.0/browser-wasm/publish"
+          dir="samples/Gorm.Playground.Browser/bin/Release/net10.0/publish"
           test -f "$dir/_framework/dotnet.js"
           find "$dir/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
           find "$dir/_framework" -type f -iname '*Gorm*' -print | head -10
@@ -55,6 +55,6 @@ jobs:
           site="$RUNNER_TEMP/gorm-pages-playwright"
           mkdir -p "$site/playground-wasm"
           cp -a docs/. "$site/"
-          cp -a samples/Gorm.Playground.Browser/bin/Release/net10.0/browser-wasm/publish/. "$site/playground-wasm/"
+          cp -a samples/Gorm.Playground.Browser/bin/Release/net10.0/publish/. "$site/playground-wasm/"
       - name: Compare real WASM SQL to native GORM SQL in Chromium
         run: node .github/scripts/verify_playground_browser.cjs "$RUNNER_TEMP/gorm-pages-playwright" "$RUNNER_TEMP/playground-native.log"
