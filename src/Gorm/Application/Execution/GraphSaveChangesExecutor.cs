@@ -122,6 +122,14 @@ public sealed class GraphSaveChangesExecutor
             return 0;
         }
 
+        // SaveChanges must remain atomic even when the caller owns the surrounding transaction.
+        // The caller can catch a recoverable error and commit earlier, unrelated work.
+        var savepointName = ownsTransaction ? null : GraphTransaction.CreateSavepointName();
+        if (savepointName is not null)
+        {
+            await GraphTransaction.ExecuteSavepointAsync(connection, transaction, savepointName, cancellationToken);
+        }
+
         try
         {
             var saveSet = GraphSaveChangesSet.Create(changeTracker);
@@ -165,7 +173,16 @@ public sealed class GraphSaveChangesExecutor
         }
         catch
         {
-            await RollbackIfNeededAsync(transaction, ownsTransaction, cancellationToken);
+            if (savepointName is not null)
+            {
+                await GraphTransaction.ExecuteRollbackToSavepointAsync(connection, transaction, savepointName, CancellationToken.None);
+                context.InvalidateTrackedStateAfterRollback();
+            }
+            else
+            {
+                await RollbackIfNeededAsync(transaction, ownsTransaction, CancellationToken.None);
+            }
+
             throw;
         }
     }

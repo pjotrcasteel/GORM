@@ -49,3 +49,9 @@ Use `SqlServerGraphHistoryReader.CaptureBitemporalDatasetAsync<TNode, TEdge>(nod
 A successful `SaveChangesAsync()` inside an explicit transaction accepts in-memory tracked changes **before the outer transaction commits**. If that transaction or a savepoint subsequently rolls back, GORM conservatively **detaches all tracked entries, clears pending edge operations and invalidates relationship caches**. Previously accepted objects must not remain `Unchanged` while their database rows have been rolled back.
 
 This does **not** restore in-memory property values, undo caller-side navigation changes, or rewind version counters. Reload entities from the database (or explicitly reattach/re-add the intended values) after rollback before continuing. A savepoint rollback invalidates the full tracker, including rows written before the savepoint, since selective snapshot reconstruction is not yet supported. Transactions left uncommitted on disposal have the same invalidation behavior.
+
+## Failed SaveChanges in caller-owned transactions
+
+Each SQL Server `SaveChangesAsync()` call inside an existing explicit transaction now creates a **local savepoint**. If a later statement fails after earlier statements in the *same SaveChanges* have already succeeded, GORM rolls back those statements to its savepoint, invalidates tracked entities and relationship caches, and rethrows the original error. The outer transaction is **not** rolled back automatically.
+
+The SQL Server regression suite includes two stale-version conflict cases: a failed batch insert must not leak into a later outer commit, and a recoverable failed save must leave earlier outer-transaction changes intact while allowing another save and commit. Existing tracker objects are detached, not magically reset to their database values. SQL Server errors that render the whole transaction uncommittable still require callers to roll back or dispose that outer transaction.

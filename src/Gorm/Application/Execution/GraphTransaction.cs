@@ -241,6 +241,17 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
         return ExecuteTransactionalCommandAsync(connection, transaction, $"SAVE TRANSACTION {SqlGenerationHelpers.Escape(savepointName)}", cancellationToken);
     }
 
+    /// <summary>
+    /// Rolls back only the current SaveChanges scope inside a caller-owned transaction.
+    /// </summary>
+    internal static Task ExecuteRollbackToSavepointAsync(DbConnection connection, DbTransaction transaction, string savepointName, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(transaction);
+        ValidateSavepointName(savepointName);
+        return ExecuteTransactionalCommandAsync(connection, transaction, $"ROLLBACK TRANSACTION {SqlGenerationHelpers.Escape(savepointName)}", cancellationToken);
+    }
+
     private static void ValidateSavepointName(string savepointName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(savepointName);
