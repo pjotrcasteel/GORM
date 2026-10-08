@@ -6,6 +6,10 @@ DOCS = ROOT / "docs"
 required = [
     "README.md",
     "LICENSE",
+    "RELEASING.md",
+    ".github/workflows/nuget-preview.yml",
+    ".github/scripts/verify_package_consumer.sh",
+    ".github/scripts/check_nuget_preview.py",
     "SemanticVersion.props",
     ".github/scripts/validate_nupkg.py",
     "SOURCE_MIGRATION.md",
@@ -64,8 +68,24 @@ public_text = "\n".join([
 if 'GORM "Forge"' in public_text or "Forge compiler" in public_text:
     raise SystemExit("Do not expose the historical GORM-internal Forge sub-brand in public product copy.")
 
-if "dotnet nuget push" in text or "nuget.org/api" in text:
-    raise SystemExit("NuGet publishing must remain absent from the repository shell.")
+# Publishing must be confined to the manually approved, main-only OIDC workflow.
+release_workflow = (ROOT / ".github/workflows/nuget-preview.yml").read_text(encoding="utf-8")
+release_guards = (
+    "github.event_name == 'workflow_dispatch'",
+    "inputs.publish == true",
+    "github.ref == 'refs/heads/main'",
+    "environment: nuget-preview",
+    "id-token: write",
+    "NuGet/login@v1",
+    "dotnet nuget push",
+)
+for guard in release_guards:
+    if guard not in release_workflow:
+        raise SystemExit(f"Missing guarded NuGet release policy: {guard}")
+
+for path in (ROOT / ".github/workflows").glob("*.yml"):
+    if path.name != "nuget-preview.yml" and "dotnet nuget push" in path.read_text(encoding="utf-8"):
+        raise SystemExit(f"NuGet publication outside the approved release workflow: {path.name}")
 
 if "Disallow: /" in (DOCS / "robots.txt").read_text(encoding="utf-8"):
     raise SystemExit("Public GORM site must be crawlable.")
