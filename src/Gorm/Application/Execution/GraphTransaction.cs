@@ -62,6 +62,7 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
     {
         var effectiveSavepointName = string.IsNullOrWhiteSpace(savepointName) ? CreateSavepointName() : savepointName;
 
+        ValidateSavepointName(effectiveSavepointName);
         await ExecuteSavepointAsync(_connection, _transaction, effectiveSavepointName, cancellationToken);
 
         return effectiveSavepointName;
@@ -76,7 +77,7 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
     public async Task RollbackToSavepointAsync(string savepointName, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        ArgumentException.ThrowIfNullOrWhiteSpace(savepointName);
+        ValidateSavepointName(savepointName);
 
         await ExecuteTransactionalCommandAsync(_connection, _transaction, $"ROLLBACK TRANSACTION {SqlGenerationHelpers.Escape(savepointName)}", cancellationToken);
     }
@@ -214,7 +215,7 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
     /// </summary>
     /// <returns>The value.</returns>
     internal static string CreateSavepointName()
-        => $"gorm_sp_{Guid.NewGuid():N}";
+        => string.Concat("gorm_sp_", Guid.NewGuid().ToString("N")[..24]);
 
     /// <summary>
     /// Executes execute savepoint async.
@@ -228,9 +229,18 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
     {
         ArgumentNullException.ThrowIfNull(connection);
         ArgumentNullException.ThrowIfNull(transaction);
-        ArgumentException.ThrowIfNullOrWhiteSpace(savepointName);
+        ValidateSavepointName(savepointName);
 
         return ExecuteTransactionalCommandAsync(connection, transaction, $"SAVE TRANSACTION {SqlGenerationHelpers.Escape(savepointName)}", cancellationToken);
+    }
+
+    private static void ValidateSavepointName(string savepointName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(savepointName);
+        if (savepointName.Length > 32)
+        {
+            throw new ArgumentException("SQL Server savepoint names cannot exceed 32 characters.", nameof(savepointName));
+        }
     }
 
     private static async Task ExecuteTransactionalCommandAsync(DbConnection connection, DbTransaction transaction, string commandText, CancellationToken cancellationToken)
