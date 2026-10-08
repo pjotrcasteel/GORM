@@ -151,7 +151,7 @@ public sealed class GraphTransactionAndStateTests
         var name = await graphTransaction.CreateSavepointAsync(null, TestContext.CancellationToken);
 
         Assert.IsTrue(name.StartsWith("gorm_sp_", StringComparison.Ordinal));
-        Assert.IsTrue(name.Length <= 32, "SQL Server savepoint identifiers may be at most 32 characters.");
+        Assert.IsLessThanOrEqualTo(name.Length, 32, "SQL Server savepoint identifiers may be at most 32 characters.");
         Assert.Contains($"SAVE TRANSACTION [{name}]", connection.ExecutedCommandTexts);
     }
 
