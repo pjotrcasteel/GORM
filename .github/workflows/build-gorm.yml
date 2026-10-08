@@ -16,20 +16,6 @@ on:
       - '.github/scripts/validate_nupkg.py'
       - '.github/verification/**'
   pull_request:
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'samples/**'
-      - 'Gorm.sln'
-      - 'Directory.*.props'
-      - 'SemanticVersion.props'
-      - 'LICENSE'
-      - 'README.md'
-      - 'NuGet.Config'
-      - 'validate.py'
-      - '.github/workflows/build-gorm.yml'
-      - '.github/scripts/validate_nupkg.py'
-      - '.github/verification/**'
   workflow_dispatch:
 
 permissions:

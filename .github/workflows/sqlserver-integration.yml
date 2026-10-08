@@ -1,14 +1,6 @@
 name: SQL Server 2022 integration
 on:
   pull_request:
-    paths:
-      - 'src/**'
-      - 'samples/Gorm.Demo/**'
-      - 'tests/Gorm.SqlServer.Tests/**'
-      - 'Directory.Build.props'
-      - 'Directory.Packages.props'
-      - 'NuGet.Config'
-      - '.github/workflows/sqlserver-integration.yml'
   push:
     branches: [main]
     paths:

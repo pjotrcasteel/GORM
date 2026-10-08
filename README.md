@@ -8,7 +8,7 @@
 
 GORM treats nodes and edges as first-class persistence concepts. It combines a LINQ-style query API, relationship-aware loading, change tracking and graph mutations with in-memory execution for tests and temporal graph history.
 
-> **Repository status:** GORM source, tests, samples and documentation are maintained together in this public repository. The library targets .NET 10, and GitHub Actions validates the public source. NuGet publication is a separate release decision.
+> **Repository status:** GORM is an MIT-licensed .NET 10 project. The first public preview, `GORM 3.1.0-preview.1`, is published on NuGet.org and has passed a fresh, independent public-feed installation check. Stable `3.1.0` has **not** been published.
 
 ## When GORM is useful
 
@@ -86,7 +86,7 @@ It does not own application business policy. Analysis and plan/preview APIs do n
 
 ## Build from source
 
-The ORM source is under [`src/Gorm`](src/Gorm), with [MSTest tests](tests/Gorm.Tests) and [sample code](samples/Gorm.Demo). The C# API uses the `Gorm` namespace; the planned package ID is `GORM`.
+The ORM source is under [`src/Gorm`](src/Gorm), with [MSTest tests](tests/Gorm.Tests) and [sample code](samples/Gorm.Demo). The C# API uses the `Gorm` namespace and the public package ID is `GORM`.
 
 ```bash
 dotnet restore Gorm.sln --configfile NuGet.Config
@@ -106,7 +106,7 @@ dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
 
 The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration runs as a separate GitHub Actions quality gate.
 
-Public source is licensed under the [MIT License](LICENSE). The [first NuGet preview release](RELEASING.md) uses `3.1.0-preview.1` and has an approval-gated workflow; inspect NuGet.org to confirm whether it has actually been published. The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
+Public source is licensed under the [MIT License](LICENSE). The verified first public preview is [GORM 3.1.0-preview.1 on NuGet.org](https://www.nuget.org/packages/GORM/3.1.0-preview.1). The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
 
 ## SQL Server 2022 integration tests
 
@@ -116,11 +116,21 @@ A separate [Testcontainers integration suite](tests/Gorm.SqlServer.Tests/README.
 dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release
 ```
 
-## First NuGet preview
+## Install the public preview
 
-The candidate version is `GORM 3.1.0-preview.1`. A separate [preview release workflow](.github/workflows/nuget-preview.yml) verifies a locally produced NuGet package, tests a clean consumer and gates release on real SQL Server 2022 integration tests. After NuGet accepts the package, the [public-feed verification workflow](.github/workflows/verify-public-nuget.yml) checks installability without attempting to publish again. Publishing is opt-in and uses NuGet.org Trusted Publishing with a short-lived GitHub OIDC credential.
+Install [GORM 3.1.0-preview.1](https://www.nuget.org/packages/GORM/3.1.0-preview.1) in a .NET 10 project:
 
-See [RELEASING.md](RELEASING.md) for setup, safety gates and the publication procedure. Neither merging a PR nor generating a GitHub artifact publishes the package.
+```bash
+dotnet add package GORM --version 3.1.0-preview.1
+```
+
+The package and portable symbols have been accepted by NuGet.org, and a separate GitHub Actions run **successfully restored and executed a clean consumer from the public feed**: [public NuGet verification](https://github.com/pjotrcasteel/GORM/actions/runs/37825476545). The package is still a preview, not a stable release.
+
+For future versions the [NuGet preview pipeline](.github/workflows/nuget-preview.yml) validates the package and real SQL Server tests before explicitly authorized publishing. A separate [public-feed check](.github/workflows/verify-public-nuget.yml) verifies installation without publishing again. See [RELEASING.md](RELEASING.md) and [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Repository governance
+
+Pull requests are checked by public-surface validation, .NET package/build/tests, and live SQL Server Graph integration. The [repository governance guide](.github/BRANCH_PROTECTION.md) documents the GitHub settings that must be enabled by a repository administrator; a committed policy alone does not enforce branch protection.
 
 ## Creator
 
