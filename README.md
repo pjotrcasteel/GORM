@@ -96,6 +96,18 @@ dotnet test Gorm.sln -c Release --no-build
 
 The library has no RoutIT.Common dependency and uses public NuGet feeds. The public-source migration and validation status are documented in [SOURCE_MIGRATION.md](SOURCE_MIGRATION.md). The documentation playground remains a browser-side query preview rather than the compiled .NET runtime.
 
+## Verify the NuGet package locally
+
+The package identity is `GORM`, currently versioned at `3.1.0` from the repository-wide `SemanticVersion.props`. To build a package without publishing:
+
+```bash
+dotnet pack src/Gorm/Gorm.csproj -c Release -o ./artifacts
+```
+
+The CI workflow restores, builds, tests, packs, checks NuGet metadata and symbols, and runs a standalone .NET 10 consumer against the resulting `.nupkg`. SourceLink maps symbols back to this repository. SQL Server integration tests remain a separate release gate.
+
+Public source is licensed under the [MIT License](LICENSE). The package has **not** been published to NuGet.org. The website's interactive Playground currently uses a browser-side query preview, not the compiled GORM runtime.
+
 ## Creator
 
 GORM is an independent open-source project by **[PjotrCasteel](https://pjotrcasteel.github.io/)**.

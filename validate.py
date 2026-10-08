@@ -5,6 +5,9 @@ DOCS = ROOT / "docs"
 
 required = [
     "README.md",
+    "LICENSE",
+    "SemanticVersion.props",
+    ".github/scripts/validate_nupkg.py",
     "SOURCE_MIGRATION.md",
     ".gitignore",
     "docs/index.html",
@@ -67,4 +70,16 @@ if "dotnet nuget push" in text or "nuget.org/api" in text:
 if "Disallow: /" in (DOCS / "robots.txt").read_text(encoding="utf-8"):
     raise SystemExit("Public GORM site must be crawlable.")
 
-print("GORM public site and independent .NET source layout validated (NuGet release separate).")
+# Package and license assertions are intentionally statically checkable as well as CI-tested.
+project = (ROOT / "src/Gorm/Gorm.csproj").read_text(encoding="utf-8")
+version_props = (ROOT / "SemanticVersion.props").read_text(encoding="utf-8")
+if "<SemanticVersion>3.1.0</SemanticVersion>" not in version_props:
+    raise SystemExit("Expected single repository-wide GORM version 3.1.0.")
+if (ROOT / "src/Gorm/SemanticVersion.props").exists():
+    raise SystemExit("Project-specific semantic version overrides are not allowed.")
+for token in ("<PackageId>GORM</PackageId>", "<PackageLicenseExpression>MIT</PackageLicenseExpression>", "Microsoft.SourceLink.GitHub", "<PackageReadmeFile>README.md</PackageReadmeFile>"):
+    if token not in project:
+        raise SystemExit(f"Missing GORM package metadata: {token}")
+if "MIT License" not in (ROOT / "LICENSE").read_text(encoding="utf-8"):
+    raise SystemExit("Missing MIT license text.")
+print("GORM public site and independent .NET source layout and package metadata validated (NuGet release separate).")
