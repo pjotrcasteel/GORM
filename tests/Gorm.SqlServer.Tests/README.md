@@ -36,3 +36,9 @@ See the [compatibility matrix](../../docs/compatibility.html) for a method-by-me
 ## Historical edge lifecycle (SQL Server 2022)
 
 The live integration suite verifies persisted connection, disconnection, explicit deletion, reconnection, parallel edge identities and transaction rollback with history. History queries reconstruct state from SQL Server's stored envelopes **in memory**, not via native temporal SQL graph queries. Histories for edges that existed before history recording was enabled and node-deletion cascade behavior remain outside the verified scope.
+
+## Bitemporal SQL history (SQL Server 2022)
+
+Seven live tests separate **business-valid time** (`ValidFromUtc`/`ValidToUtc`, half-open intervals) from **recorded-knowledge time** (`CapturedAtUtc`). They verify retrospectively recorded node corrections, time-bounded node and edge state, detached repeatable evidence, rollback and invalid-window rejection.
+
+Use `SqlServerGraphHistoryReader.CaptureBitemporalDatasetAsync<TNode, TEdge>(nodeIds, edgeIds)` to capture a detached, explicitly scoped dataset, then call `Project` or `Compare` with `GraphBitemporalCoordinate`. History records with independent validity windows can be written using `SqlServerGraphHistoryRecorder.PersistAsync`. SQL history rows are read and resolved in memory; the reader does not yet provide atomic cross-table reads during concurrent updates, and backdated evidence-only corrections do not automatically mutate live graph tables.
