@@ -51,7 +51,7 @@ public sealed partial class SqlServerGraphIntegrationTests
 
             releaseDeletion.TrySetResult();
             await deletionTask.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken);
-            await Assert.ThrowsExceptionAsync<InvalidOperationException>(
+            await Assert.ThrowsExactlyAsync<InvalidOperationException>(
                 async () => await connectionTask.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken));
 
             await using var sql = new SqlConnection(_databaseConnectionString);
