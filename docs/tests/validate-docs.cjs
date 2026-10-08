@@ -139,7 +139,7 @@ function validateCompatibilityEvidence() {
     if (entries.length < 10) fail('compatibility matrix must cite at least ten executable methods');
     const paths = new Set();
     for (const [, relativePath, method] of entries) {
-        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/SqlServerGraphIntegrationTests\.cs)$/.test(relativePath)) {
+        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/(?:SqlServerGraphIntegrationTests|SqlServerTransactionAndConcurrencyTests)\.cs)$/.test(relativePath)) {
             fail(`compatibility matrix: unexpected evidence source ${relativePath}`);
             continue;
         }
