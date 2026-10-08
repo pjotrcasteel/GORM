@@ -3,6 +3,7 @@ using Gorm.Application.History.Querying;
 using Gorm.Application.History.Storage;
 using Gorm.Demo.Domain.Edges;
 using Gorm.Demo.Domain.Nodes;
+using Gorm.Demo.Infrastructure;
 
 namespace Gorm.SqlServer.Tests;
 
