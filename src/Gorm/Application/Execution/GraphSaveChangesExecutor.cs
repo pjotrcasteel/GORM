@@ -5,6 +5,7 @@ using Gorm.Application.Context;
 using Gorm.Application.Tracking;
 using Gorm.Core.Primitives;
 using Gorm.Infrastructure.Persistence.Connections;
+using Gorm.Infrastructure.Providers.SqlServer.Helpers;
 using Gorm.Infrastructure.Sql;
 
 namespace Gorm.Application.Execution;
@@ -134,6 +135,8 @@ public sealed class GraphSaveChangesExecutor
             affectedRows += await ProcessPendingEdgeDisconnectionsAsync(context, saveSet, connection, transaction, persistedNodeIds, cancellationToken);
 
             affectedRows += await ProcessModifiedEntitiesAsync(context, saveSet, connection, transaction, cancellationToken);
+
+            affectedRows += await DeleteIncidentEdgesForDeletedNodesAsync(context, saveSet, connection, transaction, cancellationToken);
 
             affectedRows += await ProcessDeletedEntitiesAsync(context, saveSet, connection, transaction, cancellationToken);
 
@@ -366,6 +369,49 @@ public sealed class GraphSaveChangesExecutor
         var plan = GraphSaveCommandPlanCache.GetEdgePlan(mapping);
 
         return UpdateEdgeAsync(connection, transaction, plan, entry, edge, cancellationToken);
+    }
+
+    private static async Task<int> DeleteIncidentEdgesForDeletedNodesAsync(
+        GraphContext context,
+        GraphSaveChangesSet saveSet,
+        DbConnection connection,
+        DbTransaction transaction,
+        CancellationToken cancellationToken)
+    {
+        var affectedRows = 0;
+        foreach (var entry in saveSet.DeletedEntries)
+        {
+            if (entry.Entity is not Node node) continue;
+
+            var nodeMapping = context.Model.GetNode(entry.ClrType);
+            var nodeTable = SqlGenerationHelpers.EscapeFullName(nodeMapping.Schema, nodeMapping.TableName);
+            var nodeKey = SqlGenerationHelpers.Escape(nodeMapping.KeyPropertyName);
+
+            foreach (var edgeMapping in context.Model.Edges)
+            {
+                var predicates = new List<string>(2);
+                if (edgeMapping.FromNodeType == entry.ClrType)
+                {
+                    predicates.Add($"e.$from_id = (SELECT n.$node_id FROM {nodeTable} AS n WHERE n.{nodeKey} = @NodeId)");
+                }
+
+                if (edgeMapping.ToNodeType == entry.ClrType)
+                {
+                    predicates.Add($"e.$to_id = (SELECT n.$node_id FROM {nodeTable} AS n WHERE n.{nodeKey} = @NodeId)");
+                }
+
+                if (predicates.Count == 0) continue;
+
+                var edgeTable = SqlGenerationHelpers.EscapeFullName(edgeMapping.Schema, edgeMapping.TableName);
+                await using var command = connection.CreateCommand();
+                command.Transaction = transaction;
+                command.CommandText = $"DELETE e FROM {edgeTable} AS e WHERE {string.Join(" OR ", predicates)};";
+                AddParameter(command, "@NodeId", node.Id);
+                affectedRows += await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+
+        return affectedRows;
     }
 
     private static async Task<int> ProcessDeletedEntitiesAsync(
