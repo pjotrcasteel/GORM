@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  validate-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
