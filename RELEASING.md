@@ -19,7 +19,7 @@ Pull requests run the checks, **never publish**, and provide an artifact. A manu
 1. Sign in at [NuGet.org](https://www.nuget.org/) (create an account if needed). Confirm package ID `GORM` is available or owned by you. **If it belongs to someone else, don't attempt publication.**
 2. Under the NuGet.org account's **Trusted Publishing** settings, create a GitHub Actions policy with repository owner `pjotrcasteel`, repository `GORM`, workflow filename `nuget-preview.yml`, and environment `nuget-preview`.
 3. Under the GitHub repository **Settings > Environments**, create `nuget-preview`, preferably with required-reviewer approval and a deployment branch restriction to `main`.
-4. In GitHub **Settings > Secrets and variables > Actions > Variables** (or in that environment's variables), configure `NUGET_USER` as the NuGet.org *profile username*, not the email address. It isn't a token, and no persistent API key is needed.
+4. The workflow already uses the public NuGet.org profile name `PjotrCasteel`; no `NUGET_USER` variable or persistent API key is necessary.
 5. Ensure the trusted-publishing policy's package owner matches the NuGet account that owns the `GORM` package ID.
 
 The publish job uses [NuGet/login@v1](https://github.com/NuGet/login) to exchange a GitHub OIDC identity for a temporary scoped NuGet API credential.
@@ -28,7 +28,7 @@ The publish job uses [NuGet/login@v1](https://github.com/NuGet/login) to exchang
 
 1. Merge the release preparation PR after all GitHub Actions checks pass.
 2. Go to GitHub > **Actions** > **GORM NuGet preview release** > **Run workflow**, using `main`, `version = 3.1.0-preview.1`, and `publish = false`. Inspect the uploaded packages and checks.
-3. When NuGet trusted publishing and `NUGET_USER` have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.1.0-preview.1` in the confirmation field.
+3. When NuGet Trusted Publishing and the `nuget-preview` GitHub environment have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.1.0-preview.1` in the confirmation field.
 4. Publication runs only after both the full package gate and the live SQL Server gate pass. It checks the version is not registered, requests short-lived credentials, pushes the package plus symbols, then retries a fresh consumer restore **using only NuGet.org**.
 5. Once the public verification succeeds, create a corresponding GitHub prerelease/tag. This is not automated by the workflow.
 

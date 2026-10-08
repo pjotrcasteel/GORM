@@ -135,15 +135,10 @@ jobs:
         env:
           REQUESTED_CONFIRMATION: ${{ inputs.confirmation }}
           EXPECTED_VERSION: ${{ needs.candidate.outputs.version }}
-          NUGET_USER: ${{ vars.NUGET_USER }}
         run: |
           set -euo pipefail
           if [[ "$REQUESTED_CONFIRMATION" != "publish GORM $EXPECTED_VERSION" ]]; then
             echo "::error::You must explicitly confirm the matching version."
-            exit 1
-          fi
-          if [[ -z "$NUGET_USER" ]]; then
-            echo "::error::Set repository/environment variable NUGET_USER to your NuGet.org profile name."
             exit 1
           fi
           python3 .github/scripts/check_nuget_preview.py "$EXPECTED_VERSION" --reject-existing
@@ -155,7 +150,7 @@ jobs:
         id: nuget
         uses: NuGet/login@v1
         with:
-          user: ${{ vars.NUGET_USER }}
+          user: PjotrCasteel
       - name: Publish package and symbols
         shell: bash
         env:
