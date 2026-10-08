@@ -35,7 +35,7 @@ See the [compatibility matrix](../../docs/compatibility.html) for a method-by-me
 
 ## Historical edge lifecycle (SQL Server 2022)
 
-The live integration suite verifies persisted connection, disconnection, explicit deletion, reconnection, parallel edge identities and transaction rollback with history. History queries reconstruct state from SQL Server's stored envelopes **in memory**, not via native temporal SQL graph queries. Histories for edges that existed before history recording was enabled and node-deletion cascade behavior remain outside the verified scope.
+The live integration suite verifies persisted connection, disconnection, explicit deletion, reconnection, parallel edge identities and transaction rollback with history. History queries reconstruct state from SQL Server's stored envelopes **in memory**, not via native temporal SQL graph queries. Node removal now explicitly deletes incident edges in mapped SQL graph tables within the same transaction and records terminal history for edges that already have recorded history. The integration suite verifies incoming/outgoing, parallel and self-referencing edges, unrelated-edge preservation, complete transaction rollback, and cleanup of edges created before history recording was enabled. GORM cannot reconstruct history that was never recorded. Concurrent edge inserts during node removal, unmapped edge tables and savepoint-scoped cascade rollback require further verification.
 
 ## Bitemporal SQL history (SQL Server 2022)
 
