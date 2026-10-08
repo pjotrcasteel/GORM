@@ -76,7 +76,7 @@ public sealed class DefaultGraphTemporalResolver : IGraphTemporalResolver
         [
             .. edgeHistory
                 .Where(x => x.IsEdge && x.EntityType == typeof(TEdge) && x.CapturedAtUtc <= utcInstant &&(outgoing ? x.FromId == sourceNodeId : x.ToId == sourceNodeId))
-                .GroupBy(x => new { x.EntityType, x.FromId, x.ToId })
+                .GroupBy(x => new { x.EntityType, x.EntityId })
                 .Select(SelectLatest)
                 .Where(x => x is not null && IsEdgeActive(x))
                 .Select(x => x!.GetSnapshotOfType<TEdge>())
@@ -135,9 +135,7 @@ public sealed class DefaultGraphTemporalResolver : IGraphTemporalResolver
         !Options.DeletedNodesAreInactive || envelope.OperationKind is not GraphHistoryOperationKind.Deleted;
 
     private static object GetLogicalGroupKey(GraphHistoryEnvelope envelope) =>
-        envelope.IsEdge
-            ? new { envelope.EntityType, envelope.FromId, envelope.ToId }
-            : new { envelope.EntityType, envelope.EntityId };
+        new { envelope.EntityType, envelope.EntityId };
 
     private static GraphHistoryEnvelope CopyWithQueryAsOfUtc(GraphHistoryEnvelope envelope, DateTime queryAsOfUtc) =>
         new()
