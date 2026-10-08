@@ -1,6 +1,7 @@
 ﻿using Gorm.Application.Context;
 using Gorm.Application.History.Envelopes;
 using Gorm.Application.History.Recording;
+using Gorm.Application.History.Storage;
 using Gorm.Core.Primitives;
 
 namespace Gorm.Application.History.Querying;
@@ -72,7 +73,7 @@ public static class GraphTemporalTraversalExtensions
             return Enumerable.Empty<GraphTemporalTraversalResult<TEdge, TNode>>().AsQueryable();
         }
 
-        EnsureInMemoryHistory(context);
+        EnsureReadableHistory(context);
 
         var edgeHistory = context.EdgeHistory<TEdge>().ToList();
         var nodeHistory = context.History<TNode>().ToList();
@@ -108,11 +109,13 @@ public static class GraphTemporalTraversalExtensions
         return results.AsQueryable();
     }
 
-    private static void EnsureInMemoryHistory(GraphContext context)
+    private static void EnsureReadableHistory(GraphContext context)
     {
-        if (context.HistoryRecorder is not InMemoryGraphHistoryRecorder)
+        if (context.HistoryRecorder is InMemoryGraphHistoryRecorder || SqlServerGraphHistoryReaderRegistry.TryGet(context, out _))
         {
-            throw new NotSupportedException("TemporalOutgoing/TemporalIncoming/TemporalSelectWithEdge currently support only in-memory history.");
+            return;
         }
+
+        throw new NotSupportedException("Historical traversal requires in-memory history or a configured SQL Server history reader.");
     }
 }
