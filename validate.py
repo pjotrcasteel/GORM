@@ -18,6 +18,12 @@ required = [
     "docs/sitemap.xml",
     ".github/workflows/validate.yml",
     ".github/workflows/pages.yml",
+    "src/Gorm/Gorm.csproj",
+    "tests/Gorm.Tests/Gorm.Tests.csproj",
+    "samples/Gorm.Demo/Gorm.Demo.csproj",
+    "Gorm.sln",
+    "NuGet.Config",
+    ".github/workflows/build-gorm.yml",
 ]
 for relative in required:
     if not (ROOT / relative).exists():
@@ -35,8 +41,16 @@ for value in ("GORM", "Model how things connect.", "ChangeSet & transaction comp
     if value not in text:
         raise SystemExit(f"Missing required public-surface concept: {value}")
 
-if "Application.Forge" not in (ROOT / "SOURCE_MIGRATION.md").read_text(encoding="utf-8"):
-    raise SystemExit("Source migration must track the historical Application.Forge rename.")
+# The public .NET source must not depend on the historic internal namespaces or feeds.
+source_text = "\n".join(
+    p.read_text(encoding="utf-8-sig", errors="ignore")
+    for folder in ("src", "tests", "samples")
+    for p in (ROOT / folder).rglob("*")
+    if p.is_file() and p.suffix.lower() in {".cs", ".csproj", ".props", ".json"}
+)
+for forbidden in ("KPN.IRMA", "RoutIT.Common", "Application.Forge", "pkgs.dev.azure.com"):
+    if forbidden.lower() in source_text.lower():
+        raise SystemExit(f"Internal dependency or namespace remains: {forbidden}")
 
 # Public product copy must not market the internal historical capability as a Forge sub-brand.
 public_text = "\n".join([
@@ -53,4 +67,4 @@ if "dotnet nuget push" in text or "nuget.org/api" in text:
 if "Disallow: /" in (DOCS / "robots.txt").read_text(encoding="utf-8"):
     raise SystemExit("Public GORM site must be crawlable.")
 
-print("GORM repository shell validated: public site live; source/NuGet migration intentionally deferred.")
+print("GORM public site and independent .NET source layout validated (NuGet release separate).")

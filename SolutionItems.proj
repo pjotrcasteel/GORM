@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.Build.NoTargets/3.0.0">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Configurations>Debug;Release;Documentation</Configurations>
+    <Platforms>AnyCPU</Platforms>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--    Items that affect the up-to-date check of the project-->
+    <None UpToDateCheckInput="true" Include="**/*.props">
+      <Visible>true</Visible>
+    </None>
+    <None UpToDateCheckInput="true" Include="**/*.targets">
+      <Visible>true</Visible>
+    </None>
+    <None UpToDateCheckInput="true" Include="**/*.runsettings">
+      <Visible>true</Visible>
+    </None>
+    <None UpToDateCheckInput="true" Include="**/NuGet.Config">
+      <Visible>true</Visible>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <!--    Items that DO NOT affect the up-to-date check of the project-->
+    <None UpToDateCheckInput="false" Include="**/*.yml">
+      <Visible>true</Visible>
+    </None>
+    <None UpToDateCheckInput="false" Include="**/*.md">
+      <Visible>true</Visible>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <!--    exclude obj and bin folders-->
+    <None Remove="**\bin\**\*.*" />
+    <None Remove="**\obj\**\*.*" />
+    <None Remove="**\docs\**\*.*" />
+    <None Remove="Gorm*\**\*.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="global.json" />
+  </ItemGroup>
+</Project>

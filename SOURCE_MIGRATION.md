@@ -1,41 +1,20 @@
-# GORM source migration plan
+# GORM public source migration
 
-The public GORM repository is intentionally being established **before** the existing implementation source is moved into it.
+GORM is independently developed source code published under its own identity. The owner has confirmed that it was built independently on private time.
 
-This separates product identity and documentation from a potentially risky namespace/package migration.
+## Public layout
 
-## Current state
+- `src/Gorm/` — .NET 10 core implementation, namespace `Gorm`, NuGet ID `GORM`
+- `tests/Gorm.Tests/` — MSTest test suite
+- `samples/Gorm.Demo/` — SQL Server Graph demo
+- `docs/` — interactive public documentation and browser-side query preview
 
-The implementation source already exists, but current materials contain organization-specific naming and an internal capability historically named `Forge`.
+The old organization-specific namespaces, project identifiers, and internal RoutIT.Common package reference have been removed. Public package restore uses nuget.org. The prior dependency's one non-null assertion extension has a self-contained GORM implementation.
 
-That source is not copied into the public repository until the migration is reviewed and validated.
+## Validation
 
-## Migration sequence
+The source-import PR runs restore, build and test with .NET 10 in GitHub Actions. SQL Server integration/performance validation and final NuGet packaging need separate verification. Public-source publication does **not** constitute a NuGet release.
 
-1. Import the complete current GORM source and tests into a migration workspace.
-2. Preserve behavior while changing only identity/naming first.
-3. Replace organization-specific assembly, project, namespace and package names with the agreed public GORM identity.
-4. Rename the internal `Application.Forge` area to `Application.ChangeSets` (preferred) or another final neutral name.
-5. Update docs/examples/tests to the new names.
-6. Run .NET 10 build and the complete unit/integration/performance suite.
-7. Verify SQL Server Graph and in-memory provider parity boundaries.
-8. Review licensing/provenance before source publication.
-9. Add source under `src/`, tests under `tests/`, samples under `samples/`.
-10. Add NuGet packaging metadata only after the repository build is green.
-11. Publish NuGet only as a separate, explicit release decision.
+## Note on licensing
 
-## Repository shape after migration
-
-```text
-GORM/
-├── src/
-├── tests/
-├── samples/
-├── docs/
-├── benchmarks/
-├── README.md
-├── SOURCE_MIGRATION.md
-└── .github/
-```
-
-The current repository shell may publish the website before the source arrives. That is intentional.
+The repository's open-source license is a separate decision from visibility of its source. No license or third-party grant is implied by this migration document.

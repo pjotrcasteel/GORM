@@ -1,0 +1,14 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto
+
+# Declare files that will always have CRLF line endings on checkout.
+*.sln text eol=crlf
+*.cs text eol=crlf
+*.feature text eol=crlf
+
+# Declare files that will always have LF line endings on checkout.
+docs/generated/**.md text eol=lf
+
+*.verified.txt text eol=lf working-tree-encoding=UTF-8
+*.verified.xml text eol=lf working-tree-encoding=UTF-8
+*.verified.json text eol=lf working-tree-encoding=UTF-8

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Public package identity; publication requires provenance clearance. -->
+    <AssemblyName>Gorm</AssemblyName>
+    <PackageId>GORM</PackageId>
+    <RootNamespace>Gorm</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <InternalsVisibleTo Include="Gorm.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="SemanticVersion.props">
+      <Visible>true</Visible>
+      <UpToDateCheckInput>true</UpToDateCheckInput>
+    </None>
+  </ItemGroup>
+
+</Project>
