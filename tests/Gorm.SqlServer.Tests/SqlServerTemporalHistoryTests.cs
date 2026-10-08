@@ -2,7 +2,6 @@ using Gorm.Application.Context;
 using Gorm.Application.History;
 using Gorm.Application.History.Querying;
 using Gorm.Application.History.Storage;
-using Gorm.Application.Execution;
 using Gorm.Demo.Domain.Edges;
 using Gorm.Demo.Infrastructure;
 using Gorm.Demo.Domain.Nodes;
@@ -125,8 +124,8 @@ public sealed partial class SqlServerGraphIntegrationTests
             await transaction.RollbackAsync(TestContext.CancellationToken);
         }
 
-        var nodeIsPersisted = await CreateContext().CharacteristicSpecifications.Where(x => x.Id == id)
-            .AnyAsync(TestContext.CancellationToken);
+        var nodeIsPersisted = await Gorm.Application.Execution.GraphQueryableOperatorsExtensions.AnyAsync(
+            CreateContext().CharacteristicSpecifications.Where(x => x.Id == id), TestContext.CancellationToken);
         var history = await new SqlServerGraphHistoryReader(context.ConnectionFactory!)
             .ReadNodeHistoryAsync<CharacteristicSpecificationNode>(TestContext.CancellationToken);
 
