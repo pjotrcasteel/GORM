@@ -90,11 +90,31 @@ public sealed class SqlServerGraphHistoryReader
     /// <param name="maximumHistoryEntries">Maximum selected history envelopes to materialize.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A detached dataset for valid-time and recorded-time projections.</returns>
-    public async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
+    public Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
         IReadOnlyCollection<Guid> nodeIds,
         IReadOnlyCollection<Guid> edgeIds,
         int maximumHistoryEntries = 1_000_000,
         CancellationToken cancellationToken = default)
+        where TNode : Node
+        where TEdge : Edge =>
+        CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(nodeIds, edgeIds, maximumHistoryEntries, afterNodeReadAsync: null, cancellationToken);
+
+    // An internal seam allows integration tests to commit a concurrent batch exactly between the two reads.
+    internal Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetWithInterleavingAsync<TNode, TEdge>(
+        IReadOnlyCollection<Guid> nodeIds,
+        IReadOnlyCollection<Guid> edgeIds,
+        Func<CancellationToken, Task> afterNodeReadAsync,
+        CancellationToken cancellationToken = default)
+        where TNode : Node
+        where TEdge : Edge =>
+        CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(nodeIds, edgeIds, 1_000_000, afterNodeReadAsync, cancellationToken);
+
+    private async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetCoreAsync<TNode, TEdge>(
+        IReadOnlyCollection<Guid> nodeIds,
+        IReadOnlyCollection<Guid> edgeIds,
+        int maximumHistoryEntries,
+        Func<CancellationToken, Task>? afterNodeReadAsync,
+        CancellationToken cancellationToken)
         where TNode : Node
         where TEdge : Edge
     {
@@ -117,6 +137,11 @@ public sealed class SqlServerGraphHistoryReader
             throw new GraphWorldHistoryProjectionException(
                 GraphWorldHistoryProjectionFailureReason.EntryLimitExceeded,
                 $"Node history exceeded {nameof(maximumHistoryEntries)} ({maximumHistoryEntries}).");
+        }
+
+        if (afterNodeReadAsync is not null)
+        {
+            await afterNodeReadAsync(cancellationToken);
         }
 
         var edges = edgeFilter.Count == 0
