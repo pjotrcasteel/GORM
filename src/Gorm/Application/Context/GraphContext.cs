@@ -1325,6 +1325,11 @@ public abstract class GraphContext
         InvalidateRelationshipState();
     }
 
+    // Internal, per-context deterministic interleaving points used only by SQL Server integration tests.
+    internal Func<CancellationToken, Task>? AfterIncidentEdgeCleanupForTesting { get; set; }
+
+    internal Func<CancellationToken, Task>? BeforeEdgeEndpointLookupForTesting { get; set; }
+
     /// <summary>
     /// Executes try get current transaction.
     /// </summary>
