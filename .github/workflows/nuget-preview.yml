@@ -20,14 +20,14 @@ on:
         description: 'Exact prerelease package version'
         type: string
         required: true
-        default: '3.1.0-preview.1'
+        default: '3.2.0-preview.1'
       publish:
         description: 'Publish to NuGet.org (unchecked = package and test only)'
         type: boolean
         required: true
         default: false
       confirmation:
-        description: 'For publishing, type: publish GORM 3.1.0-preview.1 (matching the version)'
+        description: 'For publishing, type: publish GORM 3.2.0-preview.1 (matching the version)'
         type: string
         required: false
         default: ''
