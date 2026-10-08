@@ -1,4 +1,6 @@
 using Gorm.Application.Execution;
+using Gorm.Application.History;
+using Gorm.Application.History.Storage;
 using Gorm.Application.Querying;
 using Gorm.Demo.Domain.Edges;
 using Gorm.Demo.Domain.Nodes;
@@ -68,6 +70,52 @@ public sealed partial class SqlServerGraphIntegrationTests
         {
             releaseDeletion.TrySetResult();
             try { await deletionTask.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken); }
+            catch { /* Keep original assertion failure as primary evidence. */ }
+        }
+    }
+
+    [TestMethod]
+    public async Task DeleteNode_EdgeCommittedAfterHistoryPreparation_RecordsOneTerminalEdgeEvent()
+    {
+        var clock = new ControlledHistoryTimeProvider(new DateTimeOffset(2026, 10, 8, 10, 0, 0, TimeSpan.Zero));
+        var seed = CreateHistoryContext(clock);
+        var (source, target) = await CreateHistoryNodesAsync(seed);
+
+        var prepared = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deleting = CreateHistoryContext(clock);
+        deleting.AfterHistoryPreparationForTesting = async token =>
+        {
+            prepared.TrySetResult();
+            await release.Task.WaitAsync(token);
+        };
+
+        var deleteTask = DeleteNodeAsync(deleting, source);
+        try
+        {
+            await prepared.Task.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken);
+
+            clock.Advance(TimeSpan.FromMinutes(1));
+            var writer = CreateHistoryContext(clock);
+            var edge = ConnectHistoricalEdge(writer, source, target);
+            await writer.SaveChangesAsync(TestContext.CancellationToken);
+            clock.Advance(TimeSpan.FromMinutes(1));
+
+            release.TrySetResult();
+            await deleteTask.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken);
+
+            Assert.IsEmpty(await ReadStoredEdgeIdsAsync([edge.Id]));
+            var history = await new SqlServerGraphHistoryReader(deleting.ConnectionFactory!)
+                .ReadEdgeHistoryAsync<CharacteristicSpecificationMapEdge>(TestContext.CancellationToken);
+            var recorded = history.Where(x => x.EntityId == edge.Id).ToArray();
+            Assert.AreEqual(1, recorded.Count(x => x.OperationKind == GraphHistoryOperationKind.Connected));
+            Assert.AreEqual(1, recorded.Count(x => x.OperationKind == GraphHistoryOperationKind.Deleted),
+                "A committed edge preceding the node lock must produce a terminal history event when its node is deleted.");
+        }
+        finally
+        {
+            release.TrySetResult();
+            try { await deleteTask.WaitAsync(TimeSpan.FromSeconds(20), TestContext.CancellationToken); }
             catch { /* Keep original assertion failure as primary evidence. */ }
         }
     }
