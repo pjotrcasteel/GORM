@@ -19,7 +19,10 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 - Persists SQL Server Graph edges; traverses outgoing and incoming relationships
 - Rolls back a GORM transaction and verifies no data was committed
 - Persists and reads node history via SQL Server history tables
+- Executes server-side `StartsWith` filters, deterministic `OrderBy/Skip/Take` paging, `CountAsync`, `LongCountAsync` and `AnyAsync`
+- Traverses two stored graph edges using `ThenOutgoing` and verifies the second-hop result
+- Commits an explicit SQL transaction and reloads the written node from a new connection
 
 Test data uses unique identifiers; the entire SQL Server container is destroyed after the fixture. No private connection strings, external database or NuGet release are involved.
 
-See the [compatibility matrix](../../docs/compatibility.html) for a method-by-method evidence list and explicit outstanding gaps. The five integration tests are not yet a comprehensive provider-parity or performance suite and do not certify all temporal/GraphRAG behavior.
+See the [compatibility matrix](../../docs/compatibility.html) for a method-by-method evidence list and explicit outstanding gaps. The integration tests are not yet a comprehensive provider-parity or performance suite and do not certify all temporal/GraphRAG behavior.

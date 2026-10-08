@@ -47,6 +47,12 @@ internal sealed class PredicateWriter
             return nullComparisonSql;
         }
 
+        // SQL Server CONCAT preserves C# string-concatenation null semantics while retaining parameterization.
+        if (expression.NodeType == ExpressionType.Add && expression.Type == typeof(string))
+        {
+            return $"CONCAT({Write(expression.Left)}, {Write(expression.Right)})";
+        }
+
         var left = Write(expression.Left);
         var right = Write(expression.Right);
 
