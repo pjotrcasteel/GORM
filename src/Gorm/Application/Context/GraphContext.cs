@@ -1157,6 +1157,12 @@ public abstract class GraphContext
         DetectChanges();
 
         var historyCapture = await PrepareHistoryCaptureAsync(cancellationToken);
+
+        if (AfterHistoryPreparationForTesting is { } afterHistoryPreparation)
+        {
+            await afterHistoryPreparation(cancellationToken);
+        }
+
         var result = await _transactionCoordinator.SaveChangesAsync(
             this,
             ChangeTracker,
@@ -1329,6 +1335,8 @@ public abstract class GraphContext
     internal Func<CancellationToken, Task>? AfterIncidentEdgeCleanupForTesting { get; set; }
 
     internal Func<CancellationToken, Task>? BeforeEdgeEndpointLookupForTesting { get; set; }
+
+    internal Func<CancellationToken, Task>? AfterHistoryPreparationForTesting { get; set; }
 
     /// <summary>
     /// Executes try get current transaction.
