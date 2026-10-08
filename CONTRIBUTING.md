@@ -8,6 +8,14 @@ Thank you for helping improve [GORM](https://github.com/pjotrcasteel/GORM), a da
 - A recent Docker Engine / Docker Desktop, when running SQL Server integration tests
 - Node.js 24, when changing the documentation website
 
+## Zero-setup NuGet quickstart
+
+Run the [public-package getting-started sample](samples/Gorm.GettingStarted/README.md) to see a real typed traversal and SQL translation without installing SQL Server:
+
+```bash
+dotnet run --project samples/Gorm.GettingStarted/Gorm.GettingStarted.csproj -c Release
+```
+
 ## Build and test
 
 ```bash
