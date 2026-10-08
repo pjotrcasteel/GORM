@@ -311,7 +311,7 @@ internal static class GraphSaveCommandPlanCache
     }
 
     private static string BuildLoadNodeIdSql(string schema, string tableName, string keyPropertyName) =>
-        $"SELECT $node_id FROM {Table(schema, tableName)} WHERE {Column(keyPropertyName)} = @p0;";
+        $"SELECT $node_id FROM {Table(schema, tableName)} WITH (UPDLOCK, HOLDLOCK) WHERE {Column(keyPropertyName)} = @p0;";
 
     private static void AppendColumns(StringBuilder builder, GraphSavePropertyPlan[] properties)
     {
