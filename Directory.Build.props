@@ -1,6 +1,5 @@
 <Project>
-  <Import Project="$(MSBuildProjectDirectory)\SemanticVersion.props" Condition="Exists('$(MSBuildProjectDirectory)\SemanticVersion.props')"/>
-  <Import Project="$(MSBuildThisFileDirectory)SemanticVersion.props" Condition="!Exists('$(MSBuildProjectDirectory)\SemanticVersion.props')"/>
+  <Import Project="$(MSBuildThisFileDirectory)SemanticVersion.props" />
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

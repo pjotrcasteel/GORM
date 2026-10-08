@@ -7,8 +7,14 @@ on:
       - 'samples/**'
       - 'Gorm.sln'
       - 'Directory.*.props'
+      - 'SemanticVersion.props'
+      - 'LICENSE'
+      - 'README.md'
       - 'NuGet.Config'
+      - 'validate.py'
       - '.github/workflows/build-gorm.yml'
+      - '.github/scripts/validate_nupkg.py'
+      - '.github/verification/**'
   pull_request:
     paths:
       - 'src/**'
@@ -16,13 +22,26 @@ on:
       - 'samples/**'
       - 'Gorm.sln'
       - 'Directory.*.props'
+      - 'SemanticVersion.props'
+      - 'LICENSE'
+      - 'README.md'
       - 'NuGet.Config'
+      - 'validate.py'
       - '.github/workflows/build-gorm.yml'
+      - '.github/scripts/validate_nupkg.py'
+      - '.github/verification/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  test-and-pack:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -32,3 +51,44 @@ jobs:
         run: dotnet build Gorm.sln -c Release --no-restore
       - name: Test
         run: dotnet test Gorm.sln -c Release --no-build
+      - name: Pack without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gorm-packages"
+          dotnet pack src/Gorm/Gorm.csproj -c Release --no-build -o "$RUNNER_TEMP/gorm-packages"
+          version="$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('SemanticVersion.props').findtext('PropertyGroup/SemanticVersion'))")"
+          test -f "$RUNNER_TEMP/gorm-packages/GORM.$version.nupkg"
+          test -f "$RUNNER_TEMP/gorm-packages/GORM.$version.snupkg"
+          python3 .github/scripts/validate_nupkg.py "$RUNNER_TEMP/gorm-packages/GORM.$version.nupkg" "$RUNNER_TEMP/gorm-packages/GORM.$version.snupkg" "$version"
+      - name: Restore and run independent consumer from package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('SemanticVersion.props').findtext('PropertyGroup/SemanticVersion'))")"
+          package_dir="$RUNNER_TEMP/gorm-packages"
+          consumer_dir="$RUNNER_TEMP/gorm-package-consumer"
+          mkdir -p "$consumer_dir"
+          cp .github/verification/PackageConsumer.csproj "$consumer_dir/PackageConsumer.csproj"
+          cp .github/verification/Program.cs "$consumer_dir/Program.cs"
+          sed -i "s/__GORM_VERSION__/$version/g" "$consumer_dir/PackageConsumer.csproj"
+          cat > "$consumer_dir/NuGet.Config" <<EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local" value="$package_dir" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="local">
+                <package pattern="GORM" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          dotnet restore "$consumer_dir/PackageConsumer.csproj" --configfile "$consumer_dir/NuGet.Config"
+          dotnet run --project "$consumer_dir/PackageConsumer.csproj" -c Release --no-restore

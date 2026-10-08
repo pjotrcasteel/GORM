@@ -15,6 +15,6 @@ The old organization-specific namespaces, project identifiers, and internal Rout
 
 The source-import PR runs restore, build and test with .NET 10 in GitHub Actions. SQL Server integration/performance validation and final NuGet packaging need separate verification. Public-source publication does **not** constitute a NuGet release.
 
-## Note on licensing
+## Licensing and packaging
 
-The repository's open-source license is a separate decision from visibility of its source. No license or third-party grant is implied by this migration document.
+The independently developed GORM source and documentation are licensed under the [MIT License](LICENSE). Package metadata, deterministic SourceLink symbols and an isolated NuGet consumer check are verified in CI. Publishing to NuGet.org still requires a separate explicit release decision.
