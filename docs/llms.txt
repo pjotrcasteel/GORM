@@ -21,6 +21,7 @@ Canonical repository: https://github.com/pjotrcasteel/GORM
 - Verified NuGet-only getting-started sample: https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.GettingStarted
 - Verified public NuGet cookbook: https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.Cookbook
 - Evidence-based SQL Server compatibility matrix: https://pjotrcasteel.github.io/GORM/compatibility.html
+- Verified SQL-backed bitemporal projection guide: https://pjotrcasteel.github.io/GORM/advanced.html#bitemporal
 
 ## Core model
 
