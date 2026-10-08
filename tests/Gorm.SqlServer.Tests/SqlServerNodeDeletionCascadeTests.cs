@@ -83,6 +83,29 @@ public sealed partial class SqlServerGraphIntegrationTests
     }
 
     [TestMethod]
+    public async Task SqlHistory_DeleteNodeWithLegacyUnrecordedEdge_CleansLiveGraphWithoutInventingPastHistory()
+    {
+        var original = CreateContext();
+        var source = new CharacteristicSpecificationNode { Id = Guid.NewGuid(), Name = "Old source", Payload = "{}" };
+        var target = new CharacteristicSpecificationNode { Id = Guid.NewGuid(), Name = "Old target", Payload = "{}" };
+        original.AddRange(source, target);
+        await original.SaveChangesAsync(TestContext.CancellationToken);
+        var edge = ConnectHistoricalEdge(original, source, target);
+        await original.SaveChangesAsync(TestContext.CancellationToken);
+
+        var historyContext = CreateHistoryContext(new ControlledHistoryTimeProvider(
+            new DateTimeOffset(2026, 10, 4, 10, 0, 0, TimeSpan.Zero)));
+        historyContext.Remove(source);
+        await historyContext.SaveChangesAsync(TestContext.CancellationToken);
+
+        Assert.IsEmpty(await ReadStoredEdgeIdsAsync([edge.Id]));
+        var history = await new SqlServerGraphHistoryReader(historyContext.ConnectionFactory!)
+            .ReadEdgeHistoryAsync<CharacteristicSpecificationMapEdge>(TestContext.CancellationToken);
+        Assert.IsFalse(history.Any(x => x.EntityId == edge.Id),
+            "Enabling history later must not fabricate missing earlier connection evidence.");
+    }
+
+    [TestMethod]
     public async Task SqlHistory_DeleteNodeWithEdge_TransactionRollbackRestoresNodeEdgeAndOriginalHistory()
     {
         var clock = new ControlledHistoryTimeProvider(new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero));
