@@ -42,7 +42,7 @@ public sealed partial class SqlServerGraphIntegrationTests
             .AsNoTracking()
             .ToListAsync(TestContext.CancellationToken);
 
-        Assert.AreEqual(2, persisted.Count);
+        Assert.HasCount(2, persisted);
         Assert.IsTrue(persisted.Any(x => x.Id == outerId));
         Assert.IsTrue(persisted.Any(x => x.Id == laterId));
         Assert.IsFalse(persisted.Any(x => x.Id == rolledBackId));
@@ -76,7 +76,7 @@ public sealed partial class SqlServerGraphIntegrationTests
             .AsNoTracking()
             .ToListAsync(TestContext.CancellationToken);
 
-        Assert.AreEqual(2, persisted.Count);
+        Assert.HasCount(2, persisted);
         Assert.IsTrue(persisted.Any(x => x.Id == beforeId));
         Assert.IsTrue(persisted.Any(x => x.Id == afterId));
         Assert.IsFalse(persisted.Any(x => x.Id == undoneId));
