@@ -6,6 +6,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WasmMainJSPath>main.js</WasmMainJSPath>
     <WasmEnableHotReload>false</WasmEnableHotReload>
+    <!-- GORM uses reflection and expression trees; trimming must stay off until trim-safety is verified. -->
+    <PublishTrimmed>false</PublishTrimmed>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
