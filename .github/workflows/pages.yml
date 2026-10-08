@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "samples/Gorm.Playground.*/**"
+      - "src/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -26,6 +28,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify real GORM translator before publishing
+        run: dotnet run --project samples/Gorm.Playground.Verify/Gorm.Playground.Verify.csproj -c Release
+      - name: Install WebAssembly build tools
+        run: dotnet workload install wasm-tools
+      - name: Publish real GORM browser translator
+        run: dotnet publish samples/Gorm.Playground.Browser/Gorm.Playground.Browser.csproj -c Release
+      - name: Stage static site and .NET runtime bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          site="$RUNNER_TEMP/gorm-pages"
+          mkdir -p "$site/playground-wasm"
+          cp -a docs/. "$site/"
+          cp -a samples/Gorm.Playground.Browser/bin/Release/net10.0/browser-wasm/publish/. "$site/playground-wasm/"
+          test -f "$site/playground-wasm/_framework/dotnet.js"
+          find "$site/playground-wasm/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
+          du -sh "$site/playground-wasm"
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
@@ -33,7 +55,7 @@ jobs:
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: ${{ runner.temp }}/gorm-pages
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
