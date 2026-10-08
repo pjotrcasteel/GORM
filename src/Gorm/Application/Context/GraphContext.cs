@@ -1316,6 +1316,16 @@ public abstract class GraphContext
     }
 
     /// <summary>
+    /// Invalidates snapshots when a transaction or savepoint rolls back.
+    /// Original entity object values are not restored.
+    /// </summary>
+    internal void InvalidateTrackedStateAfterRollback()
+    {
+        ChangeTracker.Clear();
+        InvalidateRelationshipState();
+    }
+
+    /// <summary>
     /// Executes try get current transaction.
     /// </summary>
     /// <param name="connection">The active transaction connection.</param>
