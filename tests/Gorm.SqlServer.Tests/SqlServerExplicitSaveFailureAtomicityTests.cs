@@ -53,9 +53,13 @@ public sealed partial class SqlServerGraphIntegrationTests
         await winner.SaveChangesAsync(TestContext.CancellationToken);
 
         var insertedId = Guid.NewGuid();
+        var earlierId = Guid.NewGuid();
         var laterId = Guid.NewGuid();
         await using (var transaction = await staleContext.BeginTransactionAsync(TestContext.CancellationToken))
         {
+            staleContext.Add(new VersionedGraphNode { Id = earlierId, Name = "before failed save" });
+            await staleContext.SaveChangesAsync(TestContext.CancellationToken);
+
             staleContext.Add(new VersionedGraphNode { Id = insertedId, Name = "must not persist" });
             staleNode.Name = "stale update";
             staleContext.Update(staleNode);
@@ -71,10 +75,11 @@ public sealed partial class SqlServerGraphIntegrationTests
         }
 
         var rows = await CreateVersionedContext().Set<VersionedGraphNode>()
-            .Where(x => x.Id == existingId || x.Id == insertedId || x.Id == laterId)
+            .Where(x => x.Id == existingId || x.Id == insertedId || x.Id == earlierId || x.Id == laterId)
             .AsNoTracking().ToListAsync(TestContext.CancellationToken);
         Assert.IsFalse(rows.Any(x => x.Id == insertedId), "An inserted row from a failed SaveChanges escaped into the parent transaction.");
         Assert.AreEqual("winner", rows.Single(x => x.Id == existingId).Name);
+        Assert.IsTrue(rows.Any(x => x.Id == earlierId), "Savepoint rollback must preserve earlier work in the caller-owned transaction.");
         Assert.IsTrue(rows.Any(x => x.Id == laterId), "The caller must be able to continue the outer transaction after a failed savepoint.");
     }
 }
