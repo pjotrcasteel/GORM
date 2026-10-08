@@ -79,31 +79,44 @@ public sealed class SqlServerGraphHistoryReader
     internal sealed record EdgeHistoryState(Guid Id, object Snapshot);
 
     /// <summary>
-    /// Captures a detached bitemporal dataset from SQL Server node and edge history.
-    /// Each table is read separately; callers requiring a single consistent transactional read
-    /// must coordinate concurrent history writers outside this convenience method.
+    /// Captures a bounded bitemporal dataset for explicitly scoped node and edge identities.
+    /// SQL history is read separately for each entity type before filtering by identity;
+    /// callers requiring an atomic cross-table read must coordinate concurrent history writers.
     /// </summary>
     /// <typeparam name="TNode">The history node type.</typeparam>
     /// <typeparam name="TEdge">The history edge type.</typeparam>
-    /// <param name="maximumHistoryEntries">Maximum total number of node and edge envelopes to materialize.</param>
+    /// <param name="nodeIds">Node identifiers to include in the detached dataset.</param>
+    /// <param name="edgeIds">Edge identifiers to include in the detached dataset.</param>
+    /// <param name="maximumHistoryEntries">Maximum selected history envelopes to materialize.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A bounded, detached dataset that supports valid-time and recorded-time projections.</returns>
+    /// <returns>A detached dataset for valid-time and recorded-time projections.</returns>
     public async Task<GraphWorldHistoryDataset> CaptureBitemporalDatasetAsync<TNode, TEdge>(
+        IReadOnlyCollection<Guid> nodeIds,
+        IReadOnlyCollection<Guid> edgeIds,
         int maximumHistoryEntries = 1_000_000,
         CancellationToken cancellationToken = default)
         where TNode : Node
         where TEdge : Edge
     {
+        ArgumentNullException.ThrowIfNull(nodeIds);
+        ArgumentNullException.ThrowIfNull(edgeIds);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumHistoryEntries);
-        var nodes = await ReadNodeHistoryAsync<TNode>(cancellationToken);
-        if (nodes.Count > maximumHistoryEntries)
+        var nodeFilter = nodeIds.ToHashSet();
+        var edgeFilter = edgeIds.ToHashSet();
+        var nodes = nodeFilter.Count == 0
+            ? []
+            : (await ReadNodeHistoryAsync<TNode>(cancellationToken)).Where(x => nodeFilter.Contains(x.EntityId)).ToArray();
+
+        if (nodes.Length > maximumHistoryEntries)
         {
             throw new GraphWorldHistoryProjectionException(
                 GraphWorldHistoryProjectionFailureReason.EntryLimitExceeded,
                 $"Node history exceeded {nameof(maximumHistoryEntries)} ({maximumHistoryEntries}).");
         }
 
-        var edges = await ReadEdgeHistoryAsync<TEdge>(cancellationToken);
+        var edges = edgeFilter.Count == 0
+            ? []
+            : (await ReadEdgeHistoryAsync<TEdge>(cancellationToken)).Where(x => edgeFilter.Contains(x.EntityId)).ToArray();
         return GraphWorldHistoryDataset.Capture(nodes.Concat(edges), maximumHistoryEntries, cancellationToken);
     }
 
