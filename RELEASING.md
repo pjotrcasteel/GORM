@@ -1,6 +1,19 @@
 # GORM release process
 
-**The first preview, GORM 3.1.0-preview.1, was uploaded to NuGet.org and independently installed from the public feed.** See [verification run #37825476545](https://github.com/pjotrcasteel/GORM/actions/runs/37825476545). The repository's `SemanticVersion.props` remains `3.1.0`; prerelease suffixes are supplied as explicit build-time versions. The project is MIT licensed and targets .NET 10.
+**The first preview, GORM 3.1.0-preview.1, was uploaded to NuGet.org and independently installed from the public feed.** See [verification run #37825476545](https://github.com/pjotrcasteel/GORM/actions/runs/37825476545). The repository's `SemanticVersion.props` is being advanced to the **unpublished source baseline `3.2.0`**; prerelease suffixes are supplied as explicit build-time versions. The project is MIT licensed and targets .NET 10.
+
+## 3.2.0 candidate freeze (8 October 2026)
+
+The latest **public** package remains `GORM 3.1.0-preview.1`. Updating `SemanticVersion.props` to `3.2.0` changes source builds and CI artifacts, **not** NuGet.org or the GitHub release list.
+
+- Candidate target: `3.2.0-preview.1`, with release notes in [3.2.0-preview.1.md](.github/releases/3.2.0-preview.1.md).
+- Complete the final SQL Server, change-tracker, concurrency, package, documentation and compatibility tests on the release source SHA. Record any remaining unsupported behaviors explicitly, rather than holding the milestone for Playground or Visual Studio features.
+- First use the **GORM NuGet preview release** manual workflow with `version=3.2.0-preview.1` and `publish=false`. It validates and uploads an Actions candidate artifact but **never publishes** to NuGet.
+- Publishing the immutable preview requires deliberate package-owner approval and the existing guarded `nuget-preview` Trusted Publishing configuration. Set `publish=true` only after inspecting the candidate; confirmation must exactly match `publish GORM 3.2.0-preview.1`.
+- Independently verify the **public** preview from NuGet.org before creating tag `v3.2.0-preview.1` and matching GitHub prerelease at the **exact source commit used for packaging**.
+- Stable `3.2.0` is a separate future release gate: do not use the prerelease workflow to publish stable. The dedicated stable-publishing workflow, trusted-publishing environment/policy and approval flow must be prepared and validated first. Publishing is always a manual, irreversible action.
+
+The 3.2 release candidate is not blocked by the opt-in WebAssembly download size, arbitrary C# Playground editing, a future Visual Studio extension, or unverified experimental graph-intelligence capabilities not promised by the stable core package.
 
 ## Quality gates
 
@@ -27,8 +40,8 @@ The publish job uses [NuGet/login@v1](https://github.com/NuGet/login) to exchang
 ## Release procedure
 
 1. Merge the release preparation PR after all GitHub Actions checks pass.
-2. Go to GitHub > **Actions** > **GORM NuGet preview release** > **Run workflow**, using `main`, `version = 3.1.0-preview.1`, and `publish = false`. Inspect the uploaded packages and checks.
-3. When NuGet Trusted Publishing and the `nuget-preview` GitHub environment have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.1.0-preview.1` in the confirmation field.
+2. Go to GitHub > **Actions** > **GORM NuGet preview release** > **Run workflow**, using `main`, `version = 3.2.0-preview.1`, and `publish = false`. Inspect the uploaded packages and checks.
+3. When NuGet Trusted Publishing and the `nuget-preview` GitHub environment have been configured, rerun with `publish = true`. Type exactly `publish GORM 3.2.0-preview.1` in the confirmation field.
 4. Publication runs only after both the full package gate and the live SQL Server gate pass. It checks the version is not already registered, obtains short-lived credentials and pushes the immutable package and symbols. A **successful publish job confirms that NuGet accepted the upload**, not that public-feed indexing has completed.
 5. Run the separate [GORM public NuGet verification](.github/workflows/verify-public-nuget.yml) workflow from `main` for the published version. It polls the NuGet flat-container registry and restores/runs an independent .NET 10 consumer **using only NuGet.org**. It can be rerun safely: it never publishes anything.
 6. After successful public verification, create the matching GitHub prerelease/tag. For the **first preview only**, the guarded [first GitHub prerelease workflow](.github/workflows/first-github-prerelease.yml) creates `v3.1.0-preview.1` pointing to the exact source commit that produced the published package (`082c1b878fc9ab896d874f1940ccc45b58752b52`), not to a later documentation/CI commit. Subsequent versions require an explicit release workflow or maintainer action.
@@ -45,7 +58,7 @@ A GitHub Actions candidate artifact is **not** a NuGet.org publication. If publi
 
 ## Future work
 
-Before a stable release, expand SQL Server provider-parity coverage, security and performance testing, provenance/attestation, and real-engine website Playground integration.
+Before stable `3.2.0`, finish the specifically supported SQL Server and packaging gates, and document unverified advanced areas. The opt-in browser Playground already uses the real GORM runtime for four bounded presets; generic editable C# and runtime-size improvements are post-release milestones.
 
 ## Published preview record
 
