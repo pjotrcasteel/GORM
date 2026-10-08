@@ -139,7 +139,7 @@ function validateCompatibilityEvidence() {
     if (entries.length < 10) fail('compatibility matrix must cite at least ten executable methods');
     const paths = new Set();
     for (const [, relativePath, method] of entries) {
-        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/(?:SqlServerGraphIntegrationTests|SqlServerTransactionAndConcurrencyTests|SqlServerTemporalHistoryTests|SqlServerHistoricalEdgeLifecycleTests|SqlServerBitemporalHistoryTests)\.cs)$/.test(relativePath)) {
+        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.Tests\/History\/InMemoryGraphHistorySmokeTests\.cs|tests\/Gorm\.SqlServer\.Tests\/(?:SqlServerGraphIntegrationTests|SqlServerTransactionAndConcurrencyTests|SqlServerTemporalHistoryTests|SqlServerHistoricalEdgeLifecycleTests|SqlServerBitemporalHistoryTests|SqlServerNodeDeletionCascadeTests)\.cs)$/.test(relativePath)) {
             fail(`compatibility matrix: unexpected evidence source ${relativePath}`);
             continue;
         }
@@ -158,12 +158,14 @@ function validateCompatibilityEvidence() {
         'tests/Gorm.SqlServer.Tests/SqlServerTransactionAndConcurrencyTests.cs',
         'tests/Gorm.SqlServer.Tests/SqlServerTemporalHistoryTests.cs',
         'tests/Gorm.SqlServer.Tests/SqlServerHistoricalEdgeLifecycleTests.cs',
-        'tests/Gorm.SqlServer.Tests/SqlServerBitemporalHistoryTests.cs'
+        'tests/Gorm.SqlServer.Tests/SqlServerBitemporalHistoryTests.cs',
+        'tests/Gorm.SqlServer.Tests/SqlServerNodeDeletionCascadeTests.cs',
+        'tests/Gorm.Tests/History/InMemoryGraphHistorySmokeTests.cs'
     ];
     for (const source of requiredSources) {
         if (!paths.has(source)) fail(`compatibility matrix: missing required evidence source ${source}`);
     }
-    if (paths.size !== requiredSources.length) fail('compatibility matrix must use exactly the six approved evidence sources');
+    if (paths.size !== requiredSources.length) fail('compatibility matrix must use exactly the eight approved evidence sources');
     console.log(`Checked ${entries.length} compatibility matrix evidence links.`);
 }
 
