@@ -22,4 +22,4 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 
 Test data uses unique identifiers; the entire SQL Server container is destroyed after the fixture. No private connection strings, external database or NuGet release are involved.
 
-This is **not yet** a performance benchmark, a comprehensive provider parity matrix or an assertion that all temporal/GraphRAG behaviors are fully covered.
+See the [compatibility matrix](../../docs/compatibility.html) for a method-by-method evidence list and explicit outstanding gaps. The five integration tests are not yet a comprehensive provider-parity or performance suite and do not certify all temporal/GraphRAG behavior.

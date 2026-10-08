@@ -132,9 +132,34 @@ async function validatePlaygroundContracts() {
     console.log(`${passed}/${global.GormPlaygroundContracts.length} playground contracts passed.`);
 }
 
+function validateCompatibilityEvidence() {
+    const projectRoot = path.resolve(docsRoot, '..');
+    const html = fs.readFileSync(path.join(docsRoot, 'compatibility.html'), 'utf8');
+    const entries = [...html.matchAll(/<tr\s+data-evidence-file="([^"]+)"\s+data-evidence-method="([A-Za-z_][A-Za-z_0-9]*)"/g)];
+    if (entries.length < 10) fail('compatibility matrix must cite at least ten executable methods');
+    const paths = new Set();
+    for (const [, relativePath, method] of entries) {
+        if (!/^(samples\/Gorm\.Cookbook\/Program\.cs|tests\/Gorm\.SqlServer\.Tests\/SqlServerGraphIntegrationTests\.cs)$/.test(relativePath)) {
+            fail(`compatibility matrix: unexpected evidence source ${relativePath}`);
+            continue;
+        }
+        const evidencePath = path.join(projectRoot, relativePath);
+        if (!fs.existsSync(evidencePath)) {
+            fail(`compatibility matrix: missing evidence file ${relativePath}`);
+            continue;
+        }
+        const source = fs.readFileSync(evidencePath, 'utf8');
+        if (!source.includes(`${method}(`)) fail(`compatibility matrix: missing executable method ${method} in ${relativePath}`);
+        paths.add(relativePath);
+    }
+    if (paths.size !== 2) fail('compatibility matrix must distinguish the NuGet cookbook and live SQL Server tests');
+    console.log(`Checked ${entries.length} compatibility matrix evidence links.`);
+}
+
 (async () => {
     validateJavaScript();
     validateLinks();
+    validateCompatibilityEvidence();
     validatePlaygroundArchitecture();
     validateExampleCatalog();
     await validatePlaygroundContracts();

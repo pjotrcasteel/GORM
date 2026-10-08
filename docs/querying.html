@@ -37,7 +37,7 @@
     .Where(x =&gt; x.Id == serviceId)
     .Outgoing&lt;DependsOnEdge, ServiceNode&gt;()
     .ToListAsync();</code></pre><p>A temporal graph query should interpret node and edge state at the same historical point so topology and scalar state remain coherent.</p></section>
-<section class="doc-section" id="sql"><div class="doc-kicker">SQL INSPECTION</div><h2>Translation should be visible</h2><p>Use the playground to compare query intent with the expected SQL Server Graph shape.</p><div class="compare-grid"><div><span>GORM</span><pre><code>context.Set&lt;PersonNode&gt;()
+<section class="doc-section" id="sql"><div class="doc-kicker">SQL INSPECTION</div><h2>Translation should be visible</h2><p>The browser Playground demonstrates expected SQL shapes using a JavaScript preview translator, not the compiled GORM library. For authoritative SQL, run the NuGet cookbook's real Explain() example and consult the SQL Server compatibility matrix.</p><div class="compare-grid"><div><span>GORM</span><pre><code>context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
     .Outgoing&lt;WorksOnEdge, ProjectNode&gt;()</code></pre></div><div><span>SQL SHAPE</span><pre><code>SELECT target.*
 FROM PersonNode source,
@@ -45,6 +45,7 @@ FROM PersonNode source,
      ProjectNode target
 WHERE MATCH(source-(edge)-&gt;target)
   AND source.Id = @personId;</code></pre></div></div><a class="inline-card" href="./playground.html"><span>PLAYGROUND</span><strong>Edit this query</strong><p>Change the LINQ and inspect the translated query shape, graph path and notes.</p></a></section>
+<section class="doc-section" id="verification"><div class="doc-kicker">RUNTIME EVIDENCE</div><h2>Query the real public package</h2><p><a href="https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.Cookbook">The verified NuGet cookbook</a> includes executable assertions for the actual GORM APIs shown here. The <a href="./compatibility.html">SQL Server compatibility matrix</a> clearly separates in-memory demonstrations from provider-backed tests.</p></section>
 <section class="doc-section" id="performance"><div class="doc-kicker">QUERY DESIGN</div><h2>Keep graph questions focused</h2><div class="concept-grid"><article><span>FILTER EARLY</span><h3>Narrow roots</h3><p>Reduce candidate source nodes before expanding through relationships where semantics allow it.</p></article><article><span>TYPE EDGES</span><h3>Be specific</h3><p>Choose the edge type that represents the domain relationship rather than generic catch-all connections.</p></article><article><span>INSPECT</span><h3>Read the SQL</h3><p>Translation visibility helps catch accidental fan-out, unnecessary materialization and ambiguous intent.</p></article></div></section>
 <nav class="doc-page-nav"><a href="./concepts.html"><span>← PREVIOUS</span><strong>Core concepts</strong></a><a href="./guides.html"><span>NEXT →</span><strong>Guides &amp; cookbook</strong></a></nav></main>
 <aside class="toc"><span>ON THIS PAGE</span><a href="#roots">Query roots</a><a href="#filters">Filtering</a><a href="#traversal">Traversal</a><a href="#chaining">Chaining</a><a href="#include">Include</a><a href="#temporal">Temporal</a><a href="#sql">SQL inspection</a></aside></div><script src="./script.js"></script><script src="./docs-polish.js"></script></body></html>

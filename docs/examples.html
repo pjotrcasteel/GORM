@@ -23,6 +23,7 @@
 <main class="docs-content">
 <section class="docs-hero"><div class="eyebrow">RUNNABLE EXAMPLES</div><h1>Start from code that already answers a graph question.</h1><p>Each example opens directly in the GORM playground. Change the query, inspect the graph anatomy and compare the resulting SQL Server Graph shape.</p><div class="docs-actions"><a class="button" href="./playground.html#outgoing">Run first example</a><a class="button ghost" href="./querying.html">Read querying docs</a></div></section>
 
+<section class="doc-section" id="real-package"><div class="doc-kicker">PRODUCTION TRANSLATOR</div><h2>Run verified queries outside the browser preview</h2><p>The browser Playground offers editable, illustrative SQL shapes. For actual GORM translation and execution, run the <a href="https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.Cookbook">NuGet-only cookbook</a>. It executes real GORM queries and validates the results on every pull request. <a href="./compatibility.html">See database test coverage.</a></p></section>
 <section class="doc-section" id="traversal-examples"><div class="doc-kicker">TRAVERSAL</div><h2>Connected-data queries</h2><div class="example-gallery">
   <article class="example-card"><span>ONE HOP · OUTGOING</span><h3>Find a person's projects</h3><pre><code>context.Set&lt;PersonNode&gt;()
     .Where(x =&gt; x.Id == personId)
