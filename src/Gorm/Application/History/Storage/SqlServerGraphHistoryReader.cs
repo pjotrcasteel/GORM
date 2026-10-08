@@ -1,6 +1,5 @@
 ﻿using System.Data.Common;
 using System.Text.Json;
-using Gorm.Core.Primitives;
 using Gorm.Application.History.Envelopes;
 using Gorm.Application.Temporal.Bitemporal;
 using Gorm.Application.Temporal.History;
