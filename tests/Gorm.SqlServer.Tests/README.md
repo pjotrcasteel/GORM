@@ -24,6 +24,7 @@ Requires .NET 10, Docker and enough memory for SQL Server 2022. GitHub Actions u
 - Commits an explicit SQL transaction and reloads the written node from a new connection
 - Verifies nested transactions roll back to SQL Server savepoints without discarding outer writes
 - Verifies explicit named savepoint rollback with additional writes after rollback
+- Verifies that explicit root/nested/savepoint and implicit-dispose rollback invalidate tracked entities and pending edge state after a successful SaveChanges
 - Verifies optimistic concurrency on a dedicated versioned SQL Graph table using independent contexts: stale update/delete and sequential version increments
 - Reads SQL Server node history across deterministic create/update/delete capture times using `History<T>().AsOf(...)`
 - Restores historical incoming/outgoing graph connections from persisted node and edge envelopes (evaluated in memory after SQL history reads)
@@ -42,3 +43,9 @@ The live integration suite verifies persisted connection, disconnection, explici
 Nine live tests separate **business-valid time** (`ValidFromUtc`/`ValidToUtc`, half-open intervals) from **recorded-knowledge time** (`CapturedAtUtc`). They verify retrospectively recorded node corrections, time-bounded node and edge state, detached repeatable evidence, rollback and invalid-window rejection.
 
 Use `SqlServerGraphHistoryReader.CaptureBitemporalDatasetAsync<TNode, TEdge>(nodeIds, edgeIds)` to capture a detached, explicitly scoped dataset, then call `Project` or `Compare` with `GraphBitemporalCoordinate`. History records with independent validity windows can be written using `SqlServerGraphHistoryRecorder.PersistAsync`. SQL history rows are read and resolved in memory; node and edge reads now share one SQL Server `SNAPSHOT` transaction. The database **must have `ALLOW_SNAPSHOT_ISOLATION ON`** (the disposable test fixture enables this). Concurrent commits after the snapshot begins are excluded from both reads. The selected identities are currently filtered in memory after reading type-wide history tables, and backdated evidence-only corrections do not automatically mutate live graph tables. A deterministic concurrent-writer test commits node and edge history between the two reads, asserting that neither part of the newer commit appears in the earlier snapshot.
+
+## Rollback and change tracking
+
+A successful `SaveChangesAsync()` inside an explicit transaction accepts in-memory tracked changes **before the outer transaction commits**. If that transaction or a savepoint subsequently rolls back, GORM conservatively **detaches all tracked entries, clears pending edge operations and invalidates relationship caches**. Previously accepted objects must not remain `Unchanged` while their database rows have been rolled back.
+
+This does **not** restore in-memory property values, undo caller-side navigation changes, or rewind version counters. Reload entities from the database (or explicitly reattach/re-add the intended values) after rollback before continuing. A savepoint rollback invalidates the full tracker, including rows written before the savepoint, since selective snapshot reconstruction is not yet supported. Transactions left uncommitted on disposal have the same invalidation behavior.
