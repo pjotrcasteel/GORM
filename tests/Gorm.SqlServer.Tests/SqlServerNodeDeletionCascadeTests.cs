@@ -68,7 +68,7 @@ public sealed partial class SqlServerGraphIntegrationTests
         var deleted = new[] { outgoing1.Id, outgoing2.Id, incoming.Id, self.Id };
         var remainingIds = await ReadStoredEdgeIdsAsync([.. deleted, unrelated.Id]);
         Assert.HasCount(1, remainingIds);
-        Assert.IsTrue(remainingIds.Contains(unrelated.Id), "Unrelated edges must remain live.");
+        Assert.AreEqual(unrelated.Id, remainingIds.Single(), "Unrelated edges must remain live.");
 
         var history = await new SqlServerGraphHistoryReader(context.ConnectionFactory!)
             .ReadEdgeHistoryAsync<CharacteristicSpecificationMapEdge>(TestContext.CancellationToken);
@@ -123,7 +123,7 @@ public sealed partial class SqlServerGraphIntegrationTests
         }
 
         var remainingIds = await ReadStoredEdgeIdsAsync([edge.Id]);
-        Assert.IsTrue(remainingIds.Contains(edge.Id));
+        Assert.AreEqual(edge.Id, remainingIds.Single());
         var exists = await Gorm.Application.Execution.GraphQueryableOperatorsExtensions.AnyAsync(
             CreateContext().CharacteristicSpecifications.Where(x => x.Id == source.Id), TestContext.CancellationToken);
         Assert.IsTrue(exists, "Rollback must restore the deleted node.");
