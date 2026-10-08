@@ -82,7 +82,7 @@
     });
   }
 
-  function renderInspector(model){
+  function renderInspector(model,authoritative=false){
     const pipeline=document.getElementById('translation-pipeline');
     const diagnostics=document.getElementById('query-diagnostics');
     if(!pipeline||!diagnostics)return;
@@ -108,7 +108,11 @@
     const parameters=[];
     if(model.predicate?.parameter)parameters.push([`@${model.predicate.parameter}`,model.predicate.display??model.predicate.parameter,'Predicate']);
     if(model.asOf)parameters.push([`@${model.asOf}`,model.asOf,'Temporal point']);
-    if(parameters.length){
+    if(authoritative){
+      const info=document.createElement('p');
+      info.textContent='GORM assigns SQL parameter names such as @p0. This preset uses fixed demonstration values; no user expression is compiled.';
+      diagnostics.appendChild(info);
+    }else if(parameters.length){
       const table=document.createElement('div');table.className='parameter-list';
       parameters.forEach(([name,value,kind])=>{
         const row=document.createElement('div');
@@ -148,7 +152,7 @@
       });
     }
     renderAnatomy(result.model);
-    renderInspector(result.model);
+    renderInspector(result.model,result.authoritative===true);
     renderEngineStatus(result.authoritative===true);
     if(status)status.textContent=result.ok?(result.authoritative===true?'Verified GORM Explain() SQL':'Documentation preview SQL'):'Translator needs a supported GORM query root';
   }
