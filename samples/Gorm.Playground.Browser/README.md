@@ -21,7 +21,7 @@ dotnet workload install wasm-tools
 dotnet publish samples/Gorm.Playground.Browser/Gorm.Playground.Browser.csproj -c Release
 ```
 
-The publish output is at `samples/Gorm.Playground.Browser/bin/Release/net10.0/browser-wasm/publish/`. The GitHub Pages workflow copies that output into the site under `playground-wasm/`; it does not check generated binaries into the repository.
+The publish output is at `samples/Gorm.Playground.Browser/bin/Release/net10.0/publish/`. The GitHub Pages workflow copies that output into the site under `playground-wasm/`; it does not check generated binaries into the repository.
 
 **Trimming is deliberately disabled.** GORM's current expression-tree and reflection code is not guaranteed to survive linker trimming. Measure the browser download budget and verify execution before attempting to enable trimming or AOT.
 
