@@ -67,7 +67,7 @@ jobs:
         run: python3 .github/scripts/check_nuget_preview.py "${{ steps.version.outputs.version }}"
       - name: Restore
         run: dotnet restore Gorm.sln --configfile NuGet.Config
-      - name: Build with prerelease version
+      - name: Build with stable version
         run: dotnet build Gorm.sln -c Release --no-restore -p:Version="${{ steps.version.outputs.version }}"
       - name: Run fast tests
         run: dotnet test Gorm.sln -c Release --no-build
