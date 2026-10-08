@@ -54,6 +54,7 @@ async function start() {
   try {
     const address = 'http://127.0.0.1:' + server.address().port + '/playground.html';
     await page.goto(address, { waitUntil: 'domcontentloaded' });
+    await page.locator('#enable-real-gorm').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()', null,
       { timeout: 90_000 });
 
