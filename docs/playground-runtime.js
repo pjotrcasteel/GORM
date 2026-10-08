@@ -2,26 +2,26 @@
   const adapter=window.GormPlaygroundAdapter;
   if(!adapter||!window.GormPreviewEngine)return;
 
-  const engine=adapter.resolve(()=>window.GormPreviewEngine);
+  let engine=adapter.resolve(()=>window.GormPreviewEngine);
   let runVersion=0;
 
   function setText(id,value){const element=document.getElementById(id);if(element)element.textContent=value;}
-  function renderEngineStatus(){
+  function renderEngineStatus(authoritative=false){
     const metadata=engine.metadata;
     setText('engine-name',metadata.label);
     setText('engine-version',metadata.version);
     setText('engine-execution',metadata.execution);
-    setText('engine-authority',metadata.authoritative?'Authoritative runtime':'Documentation preview');
+    setText('engine-authority',authoritative?'Verified GORM Explain()':'Documentation preview');
     const status=document.getElementById('engine-status');
-    if(status)status.classList.toggle('authoritative',metadata.authoritative);
+    if(status)status.classList.toggle('authoritative',authoritative);
     const pill=document.querySelector('.preview-pill');
-    if(pill)pill.textContent=metadata.authoritative?'GORM RUNTIME TRANSLATOR':'DOCS PREVIEW TRANSLATOR';
+    if(pill)pill.textContent=authoritative?'REAL GORM SQL · BROWSER WASM':'DOCS PREVIEW TRANSLATOR';
     const note=document.querySelector('.preview-note');
-    if(note&&metadata.authoritative){
+    if(note){
       const title=note.querySelector('strong');
       const text=note.querySelector('p');
-      if(title)title.textContent='Authoritative runtime';
-      if(text)text.textContent='This playground is connected through the translator contract to an authoritative GORM runtime engine. The same documentation contracts still verify its published examples.';
+      if(title)title.textContent=authoritative?'Verified GORM translator':'Documentation preview';
+      if(text)text.textContent=authoritative?'This specific preset was translated using the real GORM Explain() running locally in .NET WebAssembly. The query is a bounded example; arbitrary C# edits still use a clearly identified preview.':'This query is being shown through the illustrative JavaScript translator. Only four unmodified, verified presets use real .NET GORM SQL; no remote execution or database connection is used.';
     }
   }
 
@@ -126,7 +126,7 @@
     if(model.traversals.length&&!model.predicate)warnings.push('Traversal has no supported root predicate; review potential fan-out.');
     if(model.skip!==null&&model.skip!==undefined&&!model.order)warnings.push('Skip without deterministic ordering can produce unstable pages.');
     if(model.include)warnings.push('Relationship materialization depends on model metadata supplied by the translator.');
-    if(model.asOf&&!engine.metadata.authoritative)warnings.push('Temporal SQL is still a documentation preview until the migrated provider validates it.');
+    if(model.asOf)warnings.push('Temporal SQL in the Playground is illustrative and not a verified GORM SQL query.');
     if(!warnings.length)warnings.push('No obvious translator-level query warnings detected.');
     const list=document.createElement('div');list.className='diagnostic-list';
     warnings.forEach((warning,index)=>{const item=document.createElement('div');item.className=index===warnings.length-1&&warnings.length===1?'ok':'';item.textContent=warning;list.appendChild(item);});
@@ -149,7 +149,8 @@
     }
     renderAnatomy(result.model);
     renderInspector(result.model);
-    if(status)status.textContent=result.ok?`${engine.metadata.label} refreshed`:'Translator needs a supported GORM query root';
+    renderEngineStatus(result.authoritative===true);
+    if(status)status.textContent=result.ok?(result.authoritative===true?'Verified GORM Explain() SQL':'Documentation preview SQL'):'Translator needs a supported GORM query root';
   }
 
   function publishRun(query,ok,error=null){
@@ -185,7 +186,8 @@
     if(actualResult!==expected.result)return `result ${actualResult??'null'}`;
     if(Boolean(result.model.asOf)!==Boolean(expected.temporal))return 'temporal mismatch';
     if((result.model.include??null)!==(expected.include??null))return 'include mismatch';
-    const missing=expected.sql.find(fragment=>!result.sql.includes(fragment));
+    const expectedSql=result.authoritative===true?(expected.hops?['SELECT','MATCH']:['SELECT','ORDER BY','OFFSET']):expected.sql;
+    const missing=expectedSql.find(fragment=>!result.sql.includes(fragment));
     return missing?`SQL missing ${missing}`:null;
   }
 
@@ -221,6 +223,13 @@
     runEngine();
     runContracts();
   }
+
+  document.addEventListener('gorm:runtime-ready',()=>{
+    engine=adapter.resolve(()=>window.GormPreviewEngine);
+    renderEngineStatus(false);
+    void runEngine();
+    void runContracts();
+  });
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();
