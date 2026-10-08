@@ -5,6 +5,8 @@
   const normalize=query=>query.replace(/\s+/g,' ').trim();
 
   async function load(){
+    const button=document.getElementById('enable-real-gorm');
+    if(button){button.disabled=true;button.textContent='Loading .NET runtime…';}
     try{
       const {dotnet}=await import('./playground-wasm/_framework/dotnet.js');
       const runtime=await dotnet.create();
@@ -42,12 +44,14 @@
           };
         }
       };
+      if(button)button.textContent='Real GORM enabled';
       document.dispatchEvent(new CustomEvent('gorm:runtime-ready'));
     }catch(error){
       // GitHub Pages may not have a WASM bundle during local documentation development.
       // The existing clearly-labelled, non-authoritative preview remains usable.
+      if(button){button.disabled=false;button.textContent='Retry real GORM SQL';}
       console.warn('GORM WebAssembly runtime unavailable; using documentation preview.',error);
     }
   }
-  void load();
+  document.getElementById('enable-real-gorm')?.addEventListener('click',()=>void load());
 })();
