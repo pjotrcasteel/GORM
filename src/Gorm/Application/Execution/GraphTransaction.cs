@@ -80,6 +80,7 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
         ValidateSavepointName(savepointName);
 
         await ExecuteTransactionalCommandAsync(_connection, _transaction, $"ROLLBACK TRANSACTION {SqlGenerationHelpers.Escape(savepointName)}", cancellationToken);
+        _context.InvalidateTrackedStateAfterRollback();
     }
 
     /// <summary>
@@ -125,11 +126,13 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
         if (IsNested)
         {
             await ExecuteTransactionalCommandAsync(_connection, _transaction, $"ROLLBACK TRANSACTION {SqlGenerationHelpers.Escape(_savepointName!)}", cancellationToken);
+            _context.InvalidateTrackedStateAfterRollback();
 
             return;
         }
 
         await _transaction.RollbackAsync(cancellationToken);
+        _context.InvalidateTrackedStateAfterRollback();
     }
 
     /// <summary>
@@ -154,6 +157,8 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
                 {
                     _transaction.Rollback();
                 }
+
+                _context.InvalidateTrackedStateAfterRollback();
             }
         }
         finally
@@ -195,6 +200,8 @@ public sealed class GraphTransaction : IAsyncDisposable, IDisposable
                 {
                     await _transaction.RollbackAsync(CancellationToken.None);
                 }
+
+                _context.InvalidateTrackedStateAfterRollback();
             }
         }
         finally
