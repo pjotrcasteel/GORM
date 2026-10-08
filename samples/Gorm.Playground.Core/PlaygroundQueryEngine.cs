@@ -14,7 +14,7 @@ public static class PlaygroundQueryEngine
 {
     private static readonly Guid ExampleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-    public static IReadOnlyList<string> SupportedExamples { get; } = ["outgoing", "incoming", "chained", "filter", "include"];
+    public static IReadOnlyList<string> SupportedExamples { get; } = ["outgoing", "incoming", "chained", "filter"];
 
     public static string Explain(string example)
     {
@@ -31,8 +31,6 @@ public static class PlaygroundQueryEngine
                 .Outgoing<RoutesToEdge, ServiceNode>().ThenOutgoing<DependsOnEdge, DatabaseNode>().Explain().Sql,
             "filter" => context.Set<ServiceNode>().Where(x => x.State == ServiceState.Active)
                 .OrderBy(x => x.Name).Skip(20).Take(25).Explain().Sql,
-            "include" => context.Set<PersonNode>().Where(x => x.Id == ExampleId)
-                .Include(x => x.Projects).Explain().Sql,
             _ => throw new NotSupportedException($"'{example}' has no verified GORM Explain() mapping. Arbitrary C# is not executed.")
         };
     }
@@ -115,6 +113,6 @@ internal sealed class DatabaseNode : Node
     public string Name { get; set; } = string.Empty;
 }
 
-internal sealed class WorksOnEdge : Edge;
-internal sealed class RoutesToEdge : Edge;
-internal sealed class DependsOnEdge : Edge;
+internal sealed class WorksOnEdge : Edge { }
+internal sealed class RoutesToEdge : Edge { }
+internal sealed class DependsOnEdge : Edge { }
