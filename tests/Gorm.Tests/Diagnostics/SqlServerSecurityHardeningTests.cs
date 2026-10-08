@@ -82,6 +82,48 @@ public sealed class SqlServerSecurityHardeningTests
         Assert.AreEqual(0, _capturedMethodCallCount);
     }
 
+    [TestMethod]
+    public void ToSql_CapturedStringConcatenation_UsesParameterizedConcat()
+    {
+        var prefix = "captured_";
+        var ctx = new UnsafeIdentifierGraphContext();
+        ctx.UseProvider(SqlServerGraphProvider.Instance);
+
+        var sql = ctx.People.Where(x => x.Name == prefix + "suffix").ToSql();
+
+        Assert.Contains("CONCAT(", sql.CommandText);
+        Assert.IsTrue(sql.Parameters.Any(x => Equals(x.Value, prefix)), "The captured prefix must be parameterized.");
+        Assert.IsTrue(sql.Parameters.Any(x => Equals(x.Value, "suffix")), "The suffix must be parameterized.");
+    }
+
+    [TestMethod]
+    public void ToSql_CapturedStringConcatenationWithSqlPayload_DoesNotInlineInput()
+    {
+        var input = "'; DROP TABLE Students;--";
+        var ctx = new UnsafeIdentifierGraphContext();
+        ctx.UseProvider(SqlServerGraphProvider.Instance);
+
+        var sql = ctx.People.Where(x => x.Name == input + "_suffix").ToSql();
+
+        Assert.Contains("CONCAT(", sql.CommandText);
+        Assert.DoesNotContain(input, sql.CommandText);
+        Assert.IsTrue(sql.Parameters.Any(x => Equals(x.Value, input)));
+    }
+
+    [TestMethod]
+    public void ToSql_CapturedMethodCallInConcatenation_RejectsWithoutExecutingMethod()
+    {
+        _capturedMethodCallCount = 0;
+        var prefix = "captured_";
+        var ctx = new UnsafeIdentifierGraphContext();
+        ctx.UseProvider(SqlServerGraphProvider.Instance);
+
+        var query = ctx.People.Where(x => x.Name == prefix + ReadUnsafeSearchValue());
+        Assert.ThrowsExactly<NotSupportedException>(() => query.ToSql());
+
+        Assert.AreEqual(0, _capturedMethodCallCount);
+    }
+
     private static int _capturedMethodCallCount;
 
     private static string ReadUnsafeSearchValue()
