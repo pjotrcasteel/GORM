@@ -166,6 +166,27 @@ public sealed partial class SqlServerGraphIntegrationTests
                 [id], [], maximumHistoryEntries: 1, cancellationToken: TestContext.CancellationToken));
     }
 
+    [TestMethod]
+    public async Task SqlBitemporal_AtomicCapture_IncludesCommittedNodeAndEdgeHistory()
+    {
+        var sourceId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var edgeId = Guid.NewGuid();
+        await PersistBitemporalHistoryAsync(
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(sourceId, "Source"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForNode(NewHistoryNode(targetId, "Target"), GraphHistoryOperationKind.Created, BitemporalDay1, BitemporalDay1),
+            GraphHistoryEnvelope.ForEdge(NewHistoryEdge(edgeId, sourceId, targetId), GraphHistoryOperationKind.Connected, BitemporalDay1, BitemporalDay1));
+
+        var dataset = await BitemporalReader().CaptureBitemporalDatasetAsync<CharacteristicSpecificationNode, CharacteristicSpecificationMapEdge>(
+            [sourceId, targetId], [edgeId], cancellationToken: TestContext.CancellationToken);
+        var result = dataset.Project(new GraphProjectionKey("temporal/atomic"), 1, At(BitemporalDay2, BitemporalDay2));
+
+        Assert.AreEqual(3, dataset.Count);
+        Assert.HasCount(2, result.Snapshot.Nodes);
+        Assert.HasCount(1, result.Snapshot.Edges);
+        Assert.AreEqual(edgeId, result.Snapshot.Edges.Single().Id);
+    }
+
     private static GraphBitemporalCoordinate At(DateTime validAt, DateTime recordedAt) =>
         new(new DateTimeOffset(validAt), new DateTimeOffset(recordedAt));
 
