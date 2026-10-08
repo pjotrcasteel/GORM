@@ -33,7 +33,7 @@ The [preview workflow](.github/workflows/nuget-preview.yml) runs these independe
 - full solution restore, Release build and MSTest suite;
 - a versioned `.nupkg` and `.snupkg`, with MIT license, README, repository metadata and SourceLink symbols;
 - a clean external .NET 10 consumer referencing the packaged artifact via `PackageReference`;
-- five real SQL Server 2022 integration tests using Testcontainers;
+- the full real SQL Server 2022 Testcontainers integration suite, including concurrent graph writes, temporal history, rollback tracking and savepoint-scoped SaveChanges atomicity;
 - a version lookup against NuGet's registry API (not search indexing).
 
 Pull requests run the checks, **never publish**, and provide an artifact. A manual workflow run with `publish = false` builds a candidate without publishing. The workflow never releases automatically on a merge.
