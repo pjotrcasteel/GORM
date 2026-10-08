@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+    <RunConfiguration>
+        <TreatNoTestsAsError>true</TreatNoTestsAsError>
+    </RunConfiguration>
+    <MSTest>
+        <MapNotRunnableToFailed>true</MapNotRunnableToFailed>
+        <MapInconclusiveToFailed>true</MapInconclusiveToFailed>
+        <Parallelize>
+            <Scope>MethodLevel</Scope>
+            <Workers>0</Workers>
+        </Parallelize>
+    </MSTest>
+</RunSettings>

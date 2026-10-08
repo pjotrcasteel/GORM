@@ -8,7 +8,7 @@
 
 GORM treats nodes and edges as first-class persistence concepts. It combines a LINQ-style query API, relationship-aware loading, change tracking and graph mutations with in-memory execution for tests and temporal graph history.
 
-> **Repository status:** the public product repository and documentation surface are established first. The existing implementation source will be migrated into this repository after its organization-specific identity and an internal namespace collision with the separate Forge product family have been cleaned up and validated. No NuGet publication is implied by this repository shell.
+> **Repository status:** GORM source, tests, samples and documentation are maintained together in this public repository. The library targets .NET 10, and GitHub Actions validates the public source. NuGet publication is a separate release decision.
 
 ## When GORM is useful
 
@@ -84,18 +84,17 @@ GORM owns graph mapping, query translation, change tracking, history and graph-p
 
 It does not own application business policy. Analysis and plan/preview APIs do not persist changes unless the application explicitly invokes a save or apply operation.
 
-## Source migration
+## Build from source
 
-The implementation being prepared for this repository currently uses organization-specific naming. Before source is added here we will:
+The ORM source is under [`src/Gorm`](src/Gorm), with [MSTest tests](tests/Gorm.Tests) and [sample code](samples/Gorm.Demo). The C# API uses the `Gorm` namespace; the planned package ID is `GORM`.
 
-1. move the source into the public repository without changing behavior;
-2. replace organization-specific project/package/namespace identity with the final GORM identity;
-3. rename the internal ChangeSet area whose current namespace collides with the separate Forge product family;
-4. run the complete .NET 10 build/test/performance suite;
-5. review licensing and package metadata;
-6. only then decide and publish the first public NuGet package.
+```bash
+dotnet restore Gorm.sln --configfile NuGet.Config
+dotnet build Gorm.sln -c Release --no-restore
+dotnet test Gorm.sln -c Release --no-build
+```
 
-See [SOURCE_MIGRATION.md](SOURCE_MIGRATION.md).
+The library has no RoutIT.Common dependency and uses public NuGet feeds. The public-source migration and validation status are documented in [SOURCE_MIGRATION.md](SOURCE_MIGRATION.md). The documentation playground remains a browser-side query preview rather than the compiled .NET runtime.
 
 ## Creator
 
