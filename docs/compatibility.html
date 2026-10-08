@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GORM Compatibility Matrix — Verified behaviors and gaps</title>
+<meta name="description" content="Evidence-backed GORM public NuGet and real SQL Server Graph verification matrix.">
+<link rel="icon" href="./logo.svg" type="image/svg+xml"><link rel="stylesheet" href="./styles.css"></head>
+<body class="docs-body"><header class="topbar"><div class="topbar-inner wrap-wide">
+<a class="brand" href="./"><img src="./logo.svg" width="31" height="31" alt=""><span>GORM</span><small>Docs</small></a>
+<nav class="top-links"><a href="./docs.html">Docs</a><a href="./reference.html">API</a><a href="https://github.com/pjotrcasteel/GORM">GitHub</a></nav></div></header>
+<div class="docs-shell wrap-wide"><aside class="docs-nav">
+<div class="nav-group"><span>GET STARTED</span><a href="./docs.html">Overview</a><a href="./guides.html">Cookbook</a></div>
+<div class="nav-group"><span>REFERENCE</span><a href="./reference.html">API reference</a><a class="active" href="./compatibility.html">Compatibility matrix</a></div></aside>
+<main class="docs-content">
+<section class="docs-hero"><div class="eyebrow">PUBLIC GORM 3.1.0-preview.1</div><h1>Verified behavior, not assumptions.</h1>
+<p>Live SQL Server 2022 integration tests and public-NuGet in-memory examples are different levels of evidence. One passing provider does not imply parity with another. This table deliberately exposes what still needs testing.</p>
+<div class="docs-actions"><a class="button" href="https://github.com/pjotrcasteel/GORM/tree/main/tests/Gorm.SqlServer.Tests">SQL Server test source</a><a class="button ghost" href="https://github.com/pjotrcasteel/GORM/tree/main/samples/Gorm.Cookbook">Runnable cookbook</a></div></section>
+<section class="doc-section" id="verified"><div class="doc-kicker">VERIFIED IN CI</div><h2>Named executable assertions</h2>
+<p>Every row below links to a checked-in executable method. Documentation CI verifies its method name remains present. The published package cookbook runs on every PR; SQL Server Testcontainers runs separately.</p>
+<div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Capability</th><th>Execution</th><th>Status</th><th>Evidence</th></tr></thead><tbody>
+<tr data-evidence-file="tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs" data-evidence-method="ValidateSchema_AfterSqlScript_MatchesGraphModel"><td>Schema model checks</td><td>SQL Server 2022</td><td>Verified</td><td>Column/nullability validation against the checked-in schema. <a href="https://github.com/pjotrcasteel/GORM/blob/main/tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs">Evidence</a></td></tr>
+<tr data-evidence-file="tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs" data-evidence-method="SaveChanges_InsertedNode_IsLoadedByFreshContext"><td>Insert and reload node</td><td>SQL Server 2022</td><td>Verified</td><td>A second context reads the persisted node. <a href="https://github.com/pjotrcasteel/GORM/blob/main/tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs">Evidence</a></td></tr>
+<tr data-evidence-file="tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs" data-evidence-method="Connect_AfterSave_TracesOutgoingAndIncomingEdges"><td>Store and traverse edges</td><td>SQL Server 2022</td><td>Verified</td><td>Incoming and outgoing SQL Graph traversal. <a href="https://github.com/pjotrcasteel/GORM/blob/main/tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs">Evidence</a></td></tr>
+<tr data-evidence-file="tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs" data-evidence-method="BeginTransaction_AfterRollback_NodeIsNotPersisted"><td>Rollback transaction</td><td>SQL Server 2022</td><td>Verified</td><td>Rolled-back data is invisible in a new context. <a href="https://github.com/pjotrcasteel/GORM/blob/main/tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs">Evidence</a></td></tr>
+<tr data-evidence-file="tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs" data-evidence-method="UseSqlServerHistory_AfterInsert_RecordsNodeHistory"><td>Node history record</td><td>SQL Server 2022</td><td>Verified</td><td>Read inserted node history from SQL history table. <a href="https://github.com/pjotrcasteel/GORM/blob/main/tests/Gorm.SqlServer.Tests/SqlServerGraphIntegrationTests.cs">Evidence</a></td></tr>
+<tr data-evidence-file="samples/Gorm.Cookbook/Program.cs" data-evidence-method="RunFilteringAndPagingAsync"><td>Filtering / paging / count</td><td>Public NuGet + in-memory</td><td>Verified</td><td>Verified compiled public API and result assertions. <a href="https://github.com/pjotrcasteel/GORM/blob/main/samples/Gorm.Cookbook/Program.cs">Evidence</a></td></tr>
+<tr data-evidence-file="samples/Gorm.Cookbook/Program.cs" data-evidence-method="RunDirectedTraversalsAsync"><td>Outgoing + incoming queries</td><td>Public NuGet + in-memory</td><td>Verified</td><td>Verified direction and target identity. <a href="https://github.com/pjotrcasteel/GORM/blob/main/samples/Gorm.Cookbook/Program.cs">Evidence</a></td></tr>
+<tr data-evidence-file="samples/Gorm.Cookbook/Program.cs" data-evidence-method="RunRelationshipLoadingAsync"><td>Include navigation</td><td>Public NuGet + in-memory</td><td>Verified</td><td>Verified materialized related node. <a href="https://github.com/pjotrcasteel/GORM/blob/main/samples/Gorm.Cookbook/Program.cs">Evidence</a></td></tr>
+<tr data-evidence-file="samples/Gorm.Cookbook/Program.cs" data-evidence-method="RunMultiHopAsync"><td>Two-hop traversal</td><td>Public NuGet + in-memory</td><td>Verified</td><td>Not yet verified against live SQL Server. <a href="https://github.com/pjotrcasteel/GORM/blob/main/samples/Gorm.Cookbook/Program.cs">Evidence</a></td></tr>
+<tr data-evidence-file="samples/Gorm.Cookbook/Program.cs" data-evidence-method="RunExplain"><td>Explain() SQL translation</td><td>Public NuGet + in-memory</td><td>Verified</td><td>SQL generated by real translator, not executed. <a href="https://github.com/pjotrcasteel/GORM/blob/main/samples/Gorm.Cookbook/Program.cs">Evidence</a></td></tr>
+</tbody></table></div></section>
+<section class="doc-section" id="gaps"><div class="doc-kicker">PHASE 2 TEST BACKLOG</div><h2>Not yet verified by the release gates</h2>
+<p>These are coverage gaps; they are not claims that functionality is missing.</p>
+<div style="overflow-x:auto"><table style="width:100%;text-align:left"><thead><tr><th>Capability</th><th>Status</th><th>Next step</th></tr></thead><tbody>
+<tr><td>Concurrent updates and write conflicts</td><td>Not yet verified</td><td>Pending live SQL Server verification</td></tr>
+<tr><td>Temporal AsOf / bitemporal traversals</td><td>Not yet verified</td><td>Not covered by the current five live provider tests</td></tr>
+<tr><td>Two-hop SQL Server translation/execution</td><td>Not yet verified</td><td>NuGet cookbook verifies in-memory behavior only</td></tr>
+<tr><td>Transaction commit and multi-step atomicity</td><td>Not yet verified</td><td>Rollback tested; positive commit cases pending</td></tr>
+<tr><td>Edge history, update and delete lifecycle</td><td>Not yet verified</td><td>Only node insertion history is currently verified</td></tr>
+<tr><td>Query performance / allocations</td><td>Not yet verified</td><td>No release-grade regression baseline</td></tr>
+<tr><td>GraphRAG / Digital Twin / advanced intelligence</td><td>Not yet verified</td><td>Advanced features not yet quality-certified</td></tr>
+</tbody></table></div></section>
+<section class="doc-section" id="reproduce"><div class="doc-kicker">REPRODUCE</div><h2>Run the same evidence locally</h2>
+<pre><code>dotnet run --project samples/Gorm.Cookbook/Gorm.Cookbook.csproj -c Release
+dotnet test tests/Gorm.SqlServer.Tests/Gorm.SqlServer.Tests.csproj -c Release</code></pre>
+<p>First command: .NET 10 and public NuGet; no Docker or database. Second: Docker and disposable SQL Server 2022, no paid hosting. The browser Playground remains an illustrative JavaScript translator, not live GORM SQL verification.</p></section>
+<nav class="doc-page-nav"><a href="./reference.html"><span>← PREVIOUS</span><strong>API reference</strong></a><a href="./guides.html"><span>NEXT →</span><strong>Cookbook</strong></a></nav>
+</main></div><script src="./script.js"></script><script src="./docs-polish.js"></script></body></html>
