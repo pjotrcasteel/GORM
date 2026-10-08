@@ -35,14 +35,22 @@ jobs:
         run: dotnet workload install wasm-tools
       - name: Publish real GORM WebAssembly
         run: dotnet publish samples/Gorm.Playground.Browser/Gorm.Playground.Browser.csproj -c Release
-      - name: Verify published browser assets
+      - name: Discover and verify published browser assets
         shell: bash
         run: |
           set -euo pipefail
-          dir="samples/Gorm.Playground.Browser/bin/Release/net10.0/publish"
-          test -f "$dir/_framework/dotnet.js"
-          find "$dir/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
-          find "$dir/_framework" -type f -iname '*Gorm*' -print | head -10
+          publish="samples/Gorm.Playground.Browser/bin/Release/net10.0/publish"
+          boot="$(find "$publish" -type f -path '*/_framework/dotnet.js' -print -quit)"
+          if [ -z "$boot" ]; then
+            echo "::error::No dotnet.js boot module found in published output"
+            find "$publish" -maxdepth 6 -type f | head -100
+            exit 1
+          fi
+          bundle="${boot%/_framework/dotnet.js}"
+          test -f "$bundle/_framework/dotnet.js"
+          find "$bundle/_framework" -type f -name '*.wasm' -print -quit | grep -q wasm
+          echo "GORM_WASM_BUNDLE=$bundle" >> "$GITHUB_ENV"
+          du -sh "$bundle"
       - name: Install browser test dependency and Chromium
         shell: bash
         run: |
@@ -55,6 +63,6 @@ jobs:
           site="$RUNNER_TEMP/gorm-pages-playwright"
           mkdir -p "$site/playground-wasm"
           cp -a docs/. "$site/"
-          cp -a samples/Gorm.Playground.Browser/bin/Release/net10.0/publish/. "$site/playground-wasm/"
+          cp -a "$GORM_WASM_BUNDLE/." "$site/playground-wasm/"
       - name: Compare real WASM SQL to native GORM SQL in Chromium
         run: node .github/scripts/verify_playground_browser.cjs "$RUNNER_TEMP/gorm-pages-playwright" "$RUNNER_TEMP/playground-native.log"
