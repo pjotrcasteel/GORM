@@ -174,3 +174,61 @@ foreach (var invalid in invalidPaths)
         Console.WriteLine("PASS invalid path rejected");
     }
 }
+
+
+// v0.2.4: mapped property filters, including names across all four node types and enum state.
+var mappedPredicates = PlaygroundQueryEngine.GetPredicateCatalog();
+if (mappedPredicates.Count != 5)
+{
+    throw new InvalidOperationException($"Expected five mapped predicate fields, found {mappedPredicates.Count}.");
+}
+
+Console.WriteLine($"PASS PREDICATE CATALOG: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(PlaygroundQueryEngine.GetPredicateCatalogJson()))}");
+
+for (var index = 0; index < 120; index++)
+{
+    var field = mappedPredicates[index % mappedPredicates.Count];
+    var value = field.Property == "State" ? (index % 2 == 0 ? "Active" : "Inactive") : $"Example {index}";
+    var intent = new PlaygroundPredicateIntent(4, field.Root, field.Property, value, "Name", index * 37 % 10001, index % 100 + 1);
+    var json = System.Text.Json.JsonSerializer.Serialize(intent,
+        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    var result = PlaygroundQueryEngine.ExplainPredicateJson(json);
+    using var parsed = System.Text.Json.JsonDocument.Parse(result);
+    var sql = parsed.RootElement.GetProperty("sql").GetString() ?? "";
+    if (!sql.Contains("SELECT", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException($"No real GORM SQL for mapped predicate {index}.");
+    }
+
+    Console.WriteLine($"PASS PREDICATE {index}: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(result))}");
+}
+
+string[] invalidPredicates =
+[
+    "{}",
+    "[]",
+    """{"version":3,"root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":4,"root":"FakeNode","property":"Name","value":"Billing API","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":4,"root":"PersonNode","property":"State","value":"Active","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"State","skip":0,"take":25}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","value":"Billing!","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":4,"root":"ServiceNode","property":"State","value":"Compromised","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"Name","skip":-1,"take":25}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"Name","skip":0,"take":0}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"Name","skip":0,"take":25,"eval":true}""",
+    """{"version":4,"root":"ServiceNode","property":"Name","property":"State","value":"Active","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":"4","root":"ServiceNode","property":"Name","value":"Billing API","orderBy":"Name","skip":0,"take":25}"""
+];
+
+foreach (var invalid in invalidPredicates)
+{
+    try
+    {
+        _ = PlaygroundQueryEngine.ExplainPredicateJson(invalid);
+        throw new InvalidOperationException($"Unsupported predicate accepted: {invalid}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine("PASS invalid mapped predicate rejected");
+    }
+}
