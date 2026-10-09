@@ -117,3 +117,60 @@ foreach (var invalid in invalidTraversals)
         Console.WriteLine("PASS invalid traversal rejected");
     }
 }
+
+
+// v3: every bounded two-hop path must emit the same real SQL in native .NET and browser WASM.
+var paths = PlaygroundQueryEngine.GetPathCatalog();
+if (paths.Count != 4)
+{
+    throw new InvalidOperationException($"Expected four model-validated two-hop paths, found {paths.Count}.");
+}
+
+Console.WriteLine($"PASS PATH CATALOG: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(PlaygroundQueryEngine.GetPathCatalogJson()))}");
+
+for (var index = 0; index < 120; index++)
+{
+    var route = paths[index % paths.Count];
+    var id = Guid.Parse($"00000000-0000-0000-0000-{index + 31:x12}");
+    var intent = new PlaygroundPathIntent(3, route.Root, id, route.Hops);
+    var json = System.Text.Json.JsonSerializer.Serialize(intent,
+        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    var result = PlaygroundQueryEngine.ExplainPathJson(json);
+    using var parsed = System.Text.Json.JsonDocument.Parse(result);
+    var sql = parsed.RootElement.GetProperty("sql").GetString() ?? "";
+    if (!sql.Contains("MATCH", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException($"No graph MATCH in two-hop GORM path {index}.");
+    }
+
+    Console.WriteLine($"PASS PATH {index}: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(result))}");
+}
+
+string[] invalidPaths =
+[
+    "{}",
+    "[]",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"incoming","edge":"DependsOnEdge","target":"DatabaseNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"},{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"}]}""",
+    """{"version":3,"root":"FakeNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"bad","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode","eval":true},{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"outgoing","edge":"DependsOnEdge","edge":"RoutesToEdge","target":"DatabaseNode"}]}""",
+    """{"version":"3","root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"outgoing","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"}]}""",
+    """{"version":3,"root":"ServiceNode","nodeId":"00000000-0000-0000-0000-000000000001","hops":[{"direction":"reverse","edge":"RoutesToEdge","target":"ServiceNode"},{"direction":"outgoing","edge":"DependsOnEdge","target":"DatabaseNode"}]}"""
+];
+
+foreach (var invalid in invalidPaths)
+{
+    try
+    {
+        _ = PlaygroundQueryEngine.ExplainPathJson(invalid);
+        throw new InvalidOperationException($"Unsupported two-hop GORM path was accepted: {invalid}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine("PASS invalid path rejected");
+    }
+}
