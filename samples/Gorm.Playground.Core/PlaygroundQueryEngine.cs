@@ -99,6 +99,82 @@ public static class PlaygroundQueryEngine
 
     public static string ExplainTraversalJson(string json) => JsonSerializer.Serialize(ExplainTraversal(json), JsonOptions);
 
+    /// <summary>Find two-hop paths by composing the actual GORM model's valid single-hop routes.</summary>
+    public static IReadOnlyList<PlaygroundPathRoute> GetPathCatalog()
+    {
+        var routes = GetTraversalCatalog();
+        return [.. (from first in routes
+                    from second in routes
+                    where first.Target == second.Root
+                    let path = new PlaygroundPathRoute(first.Root,
+                        [new PlaygroundPathHop(first.Direction, first.Edge, first.Target),
+                            new PlaygroundPathHop(second.Direction, second.Edge, second.Target)])
+                    where IsSupportedPath(path)
+                    orderby path.Root, first.Direction, first.Edge, second.Direction, second.Edge
+                    select path)];
+    }
+
+    public static string GetPathCatalogJson() => JsonSerializer.Serialize(GetPathCatalog(), JsonOptions);
+
+    /// <summary>Revalidate both hops against GORM's registered model before real LINQ translation.</summary>
+    public static PlaygroundExplainResponse ExplainPath(string json)
+    {
+        var intent = PlaygroundPathIntent.Parse(json);
+        var path = new PlaygroundPathRoute(intent.Root, intent.Hops);
+        if (!IsSupportedPath(path) || !GetPathCatalog().Any(candidate => SamePath(path, candidate)))
+        {
+            throw new NotSupportedException("The requested two-hop traversal is not mapped by this GORM model.");
+        }
+
+        var context = new PlaygroundGraphContext();
+        var id = intent.NodeId;
+        var first = intent.Hops[0];
+        var second = intent.Hops[1];
+        var explanation = (intent.Root, first.Direction, first.Edge, first.Target, second.Direction, second.Edge, second.Target) switch
+        {
+            ("ServiceNode", "outgoing", "RoutesToEdge", "ServiceNode", "outgoing", "DependsOnEdge", "DatabaseNode") =>
+                context.Set<ServiceNode>().Where(x => x.Id == id).Outgoing<RoutesToEdge, ServiceNode>()
+                    .ThenOutgoing<DependsOnEdge, DatabaseNode>().Explain(),
+            ("ServiceNode", "incoming", "RoutesToEdge", "ServiceNode", "outgoing", "DependsOnEdge", "DatabaseNode") =>
+                context.Set<ServiceNode>().Where(x => x.Id == id).Incoming<RoutesToEdge, ServiceNode>()
+                    .ThenOutgoing<DependsOnEdge, DatabaseNode>().Explain(),
+            ("DatabaseNode", "incoming", "DependsOnEdge", "ServiceNode", "outgoing", "RoutesToEdge", "ServiceNode") =>
+                context.Set<DatabaseNode>().Where(x => x.Id == id).Incoming<DependsOnEdge, ServiceNode>()
+                    .ThenOutgoing<RoutesToEdge, ServiceNode>().Explain(),
+            ("DatabaseNode", "incoming", "DependsOnEdge", "ServiceNode", "incoming", "RoutesToEdge", "ServiceNode") =>
+                context.Set<DatabaseNode>().Where(x => x.Id == id).Incoming<DependsOnEdge, ServiceNode>()
+                    .ThenIncoming<RoutesToEdge, ServiceNode>().Explain(),
+            _ => throw new NotSupportedException("No typed GORM LINQ translation is registered for this two-hop path.")
+        };
+
+        return new PlaygroundExplainResponse(explanation.Sql,
+            [.. explanation.Parameters.Select(parameter =>
+                new PlaygroundBoundParameter(parameter.Name, parameter.Value, parameter.DbType?.ToString()))],
+            explanation.DebugView);
+    }
+
+    public static string ExplainPathJson(string json) => JsonSerializer.Serialize(ExplainPath(json), JsonOptions);
+
+    private static bool SamePath(PlaygroundPathRoute left, PlaygroundPathRoute right) =>
+        left.Root == right.Root && left.Hops.Count == 2 && right.Hops.Count == 2
+        && left.Hops[0] == right.Hops[0] && left.Hops[1] == right.Hops[1];
+
+    private static bool IsSupportedPath(PlaygroundPathRoute path)
+    {
+        if (path.Hops.Count != 2)
+        {
+            return false;
+        }
+
+        var first = path.Hops[0];
+        var second = path.Hops[1];
+        return (path.Root, first.Direction, first.Edge, first.Target, second.Direction, second.Edge, second.Target) is
+            ("ServiceNode", "outgoing", "RoutesToEdge", "ServiceNode", "outgoing", "DependsOnEdge", "DatabaseNode")
+            or ("ServiceNode", "incoming", "RoutesToEdge", "ServiceNode", "outgoing", "DependsOnEdge", "DatabaseNode")
+            or ("DatabaseNode", "incoming", "DependsOnEdge", "ServiceNode", "outgoing", "RoutesToEdge", "ServiceNode")
+            or ("DatabaseNode", "incoming", "DependsOnEdge", "ServiceNode", "incoming", "RoutesToEdge", "ServiceNode");
+    }
+
     private static bool IsSupportedTraversal(PlaygroundTraversalRoute route) =>
         (route.Root, route.Direction, route.Edge, route.Target) is
             ("PersonNode", "outgoing", "WorksOnEdge", "ProjectNode")
