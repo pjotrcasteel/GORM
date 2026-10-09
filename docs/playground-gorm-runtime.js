@@ -15,15 +15,21 @@
       const explainIntent=exports.Gorm?.Playground?.Browser?.Program?.ExplainIntent;
       const explainTraversal=exports.Gorm?.Playground?.Browser?.Program?.ExplainTraversal;
       const getTraversalCatalog=exports.Gorm?.Playground?.Browser?.Program?.TraversalCatalog;
+      const explainPath=exports.Gorm?.Playground?.Browser?.Program?.ExplainPath;
+      const getPathCatalog=exports.Gorm?.Playground?.Browser?.Program?.PathCatalog;
       if(typeof explain!=='function'||typeof explainIntent!=='function'
-        ||typeof explainTraversal!=='function'||typeof getTraversalCatalog!=='function')
-        throw new Error('Required GORM Explain/traversal exports are missing');
+        ||typeof explainTraversal!=='function'||typeof getTraversalCatalog!=='function'
+        ||typeof explainPath!=='function'||typeof getPathCatalog!=='function')
+        throw new Error('Required GORM Explain/traversal/path exports are missing');
       const traversalCatalog=JSON.parse(getTraversalCatalog());
+      const pathCatalog=JSON.parse(getPathCatalog());
       if(!Array.isArray(traversalCatalog)||!traversalCatalog.length)throw new Error('GORM model returned no traversable graph routes');
+      if(!Array.isArray(pathCatalog)||!pathCatalog.length)throw new Error('GORM model returned no mapped two-hop paths');
       await runtime.runMain();
 
       window.GormPlaygroundEngine={
         traversalCatalog,
+        pathCatalog,
         metadata:{
           id:'gorm-wasm-hybrid',
           label:'GORM Explain() + preview',
@@ -36,6 +42,20 @@
           const preview=window.GormPreviewEngine.translate(query);
           const example=(window.GormPlaygroundExamples??[]).find(item=>supported.has(item.key)&&normalize(item.query)===normalize(query));
           if(!example){
+            const path=window.GormPlaygroundPaths?.parse(query);
+            if(path){
+              const explained=JSON.parse(explainPath(JSON.stringify(path)));
+              if(typeof explained.sql!=='string'||!Array.isArray(explained.parameters))throw new Error('GORM two-hop Explain contract failed.');
+              return {
+                ...preview,
+                ok:true,
+                sql:explained.sql,
+                parameters:explained.parameters,
+                authoritative:true,
+                notes:['Compiled using the real GORM path LINQ provider, with both hop mappings validated by .NET.',
+                  'Provider SQL and bound parameters are authoritative; editor C# is never executed.']
+              };
+            }
             const traversal=window.GormPlaygroundTraversals?.parse(query);
             if(traversal){
               const explained=JSON.parse(explainTraversal(JSON.stringify(traversal)));
