@@ -20,4 +20,10 @@ public static partial class Program
 
     [JSExport]
     public static string ExplainTraversal(string json) => PlaygroundQueryEngine.ExplainTraversalJson(json);
+
+    [JSExport]
+    public static string PathCatalog() => PlaygroundQueryEngine.GetPathCatalogJson();
+
+    [JSExport]
+    public static string ExplainPath(string json) => PlaygroundQueryEngine.ExplainPathJson(json);
 }
