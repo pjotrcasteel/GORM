@@ -41,11 +41,11 @@ public static class PlaygroundQueryEngine
     public static IReadOnlyList<PlaygroundPredicateField> GetPredicateCatalog()
     {
         var model = new PlaygroundGraphContext().Model;
-        return [.. model.Nodes.SelectMany(node => node.Properties)
-            .Where(property => property.PropertyName == "Name" && property.PropertyType == typeof(string)
-                || property.PropertyName == "State" && property.PropertyType == typeof(ServiceState))
-            .Select(property => new PlaygroundPredicateField(model.Nodes.First(node => node.Properties.Contains(property)).ClrType.Name,
-                property.PropertyName, property.PropertyType == typeof(string) ? "string" : "enum"))
+        return [.. model.Nodes.SelectMany(node => node.Properties
+            .Where(property => (property.PropertyName == "Name" && property.PropertyType == typeof(string))
+                || (property.PropertyName == "State" && property.PropertyType == typeof(ServiceState)))
+            .Select(property => new PlaygroundPredicateField(node.ClrType.Name, property.PropertyName,
+                property.PropertyType == typeof(string) ? "string" : "enum")))
             .Where(IsSupportedPredicate)
             .OrderBy(field => field.Root, StringComparer.Ordinal)
             .ThenBy(field => field.Property, StringComparer.Ordinal)];
@@ -64,6 +64,7 @@ public static class PlaygroundQueryEngine
 
         var context = new PlaygroundGraphContext();
         var value = intent.Value;
+        var state = value == "Active" ? ServiceState.Active : ServiceState.Inactive;
         var explanation = (intent.Root, intent.Property) switch
         {
             ("PersonNode", "Name") => context.Set<PersonNode>().Where(x => x.Name == value)
@@ -75,7 +76,7 @@ public static class PlaygroundQueryEngine
             ("DatabaseNode", "Name") => context.Set<DatabaseNode>().Where(x => x.Name == value)
                 .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
             ("ServiceNode", "State") => context.Set<ServiceNode>()
-                .Where(x => x.State == (value == "Active" ? ServiceState.Active : ServiceState.Inactive))
+                .Where(x => x.State == state)
                 .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
             _ => throw new NotSupportedException("No executable GORM predicate translator exists for this model field.")
         };
