@@ -32,4 +32,7 @@ public static partial class Program
 
     [JSExport]
     public static string ExplainPredicate(string json) => PlaygroundQueryEngine.ExplainPredicateJson(json);
+
+    [JSExport]
+    public static string ExplainCombinedPredicate(string json) => PlaygroundQueryEngine.ExplainCombinedPredicateJson(json);
 }
