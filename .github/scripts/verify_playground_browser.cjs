@@ -28,6 +28,9 @@ const predicateCatalogLine = reference.match(/^PASS PREDICATE CATALOG: ([A-Za-z0
 assert.ok(predicateCatalogLine, 'Native GORM must expose its validated predicate model fields');
 const nativePredicateFields = JSON.parse(Buffer.from(predicateCatalogLine[1], 'base64').toString('utf8'));
 assert.equal(nativePredicateFields.length, 5, 'Mapped GORM property catalog should have four names and ServiceNode.State');
+const combinedCases = new Map([...reference.matchAll(/^PASS COMBINED (\d+): ([A-Za-z0-9+/=]+)$/gm)]
+  .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+assert.equal(combinedCases.size, 120, 'Native GORM must produce 120 combined AND Explain results.');
 assert.equal(predicateCases.size, 120, 'Native GORM must produce 120 mapped predicate Explain results.');
 assert.equal(pathCases.size, 120, 'Native GORM must produce 120 independent two-hop Explain results.');
 assert.equal(traversalCases.size, 120, 'Native GORM must produce 120 independent graph traversal results.');
@@ -82,9 +85,9 @@ async function start() {
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()', null,
       { timeout: 90_000 });
 
-    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.4/);
+    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.5/);
     assert.match(await page.locator('#playground-release-id').textContent(), /GORM 3\.2\.0/);
-    console.log('PASS independently versioned Playground v0.2.4 visible in site header');
+    console.log('PASS independently versioned Playground v0.2.5 visible in site header');
 
     const testReal = async (key, table) => {
       await page.locator('[data-example="' + key + '"]').click();
@@ -206,6 +209,45 @@ async function start() {
       assert.deepEqual(actual.parameters, native.parameters, 'Native and WASM mapped predicate values differ for ' + index);
     }
     console.log('PASS 120 model-aware Name/State predicate variants equal native GORM SQL and parameters');
+
+
+    for (const [index, native] of combinedCases) {
+      const intent = {
+        version: 5, root: 'ServiceNode', name: 'Service ' + index,
+        state: index % 2 === 0 ? 'Active' : 'Inactive', logic: 'and', orderBy: 'Name',
+        skip: index * 71 % 10001, take: index % 100 + 1
+      };
+      const actual = await page.evaluate(data => {
+        const query = window.GormPlaygroundCombined.format(data);
+        const result = window.GormPlaygroundEngine.translate(query);
+        return {sql: result.sql, parameters: result.parameters, authoritative: result.authoritative};
+      }, intent);
+      assert.equal(actual.authoritative, true, 'Combined AND query must be verified: ' + index);
+      assert.equal(actual.sql, native.sql, 'Native and browser combined SQL disagree: ' + index);
+      assert.deepEqual(actual.parameters, native.parameters, 'Native and browser combined parameters disagree: ' + index);
+    }
+    console.log('PASS 120 combined ServiceNode Name AND State real-GORM SQL and bound parameter parity cases');
+
+    const beforeCombinedHelp = await page.locator('#query-editor').inputValue();
+    await page.locator('#combined-help-me').click();
+    assert.equal(await page.locator('#combined-name').inputValue(), 'Billing API');
+    assert.equal(await page.locator('#combined-state').inputValue(), 'Active');
+    assert.equal(await page.locator('#combined-skip').inputValue(), '0');
+    assert.equal(await page.locator('#combined-take').inputValue(), '25');
+    assert.equal(await page.locator('#query-editor').inputValue(), beforeCombinedHelp,
+      'Combined Help me should populate only controls, without auto execution');
+    await page.locator('#combined-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    const combinedSql = await page.locator('#sql-output code').textContent();
+    assert.match(combinedSql, / AND /i);
+    assert.match(await page.locator('#query-editor').inputValue(),
+      /x.Name == "Billing API" && x.State == ServiceState.Active/);
+    console.log('PASS combined Help me fills valid AND query, but only explicit Analyze executes it');
+
+    await page.locator('#query-editor').fill((await page.locator('#query-editor').inputValue()).replace(' && ', ' || '));
+    await page.locator('#run-query').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
+    console.log('PASS unsupported logical OR never becomes authoritative from composite parser');
 
     const beforeHelp = await page.locator('#query-editor').inputValue();
     await page.locator('#predicate-help-me').click();
