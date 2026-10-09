@@ -10,6 +10,13 @@ const expected = new Map([...reference.matchAll(/^PASS (outgoing|incoming|chaine
 const normalize = text => text.replace(/\s+/g, ' ').trim();
 const intentCases = new Map([...reference.matchAll(/^PASS INTENT (\d+): ([A-Za-z0-9+/=]+)$/gm)]
   .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+const traversalCases = new Map([...reference.matchAll(/^PASS TRAVERSAL (\d+): ([A-Za-z0-9+/=]+)$/gm)]
+  .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+const traversalCatalogLine = reference.match(/^PASS TRAVERSAL CATALOG: ([A-Za-z0-9+/=]+)$/m);
+assert.ok(traversalCatalogLine, 'Native GORM must supply an actual mapped graph route catalog');
+const nativeTraversalRoutes = JSON.parse(Buffer.from(traversalCatalogLine[1], 'base64').toString('utf8'));
+assert.equal(nativeTraversalRoutes.length, 6, 'Playground must expose exactly the six mapped single-hop directions');
+assert.equal(traversalCases.size, 120, 'Native GORM must produce 120 independent graph traversal results.');
 assert.equal(intentCases.size, 120, 'Native GORM must produce 120 independent bounded intent results.');
 assert.equal(expected.size, 4, 'Native GORM Explain() output must cover exactly four verified presets.');
 
@@ -96,6 +103,38 @@ async function start() {
       assert.deepEqual(actual.parameters, native.parameters, 'Editable intent ' + index + ' parameter names and values must match native');
     }
     console.log('PASS 120 editable native/WASM intents with identical SQL and provider parameters');
+
+    const catalog = await page.evaluate(() => window.GormPlaygroundEngine.traversalCatalog);
+    assert.deepEqual(catalog, nativeTraversalRoutes, 'Browser model graph routes must equal native GORM metadata');
+    for (const [index, native] of traversalCases) {
+      const route = nativeTraversalRoutes[index % nativeTraversalRoutes.length];
+      const nodeId = '00000000-0000-0000-0000-' + (index + 1).toString(16).padStart(12, '0');
+      const intent = {...route, version: 2, nodeId};
+      const actual = await page.evaluate(data => {
+        const query = window.GormPlaygroundTraversals.format(data);
+        const result = window.GormPlaygroundEngine.translate(query);
+        return {sql: result.sql, parameters: result.parameters, authoritative: result.authoritative};
+      }, intent);
+      assert.equal(actual.authoritative, true, 'Model route ' + index + ' must be authoritative');
+      assert.equal(actual.sql, native.sql, 'Route ' + index + ' SQL differs from native GORM Explain');
+      assert.deepEqual(actual.parameters, native.parameters, 'Route ' + index + ' SQL parameters differ from native');
+    }
+    console.log('PASS 120 model-validated traversals with identical native/WASM SQL and parameters');
+
+    await page.locator('#traversal-root').selectOption('DatabaseNode');
+    await page.locator('#traversal-id').fill('00000000-0000-0000-0000-00000000000f');
+    await page.locator('#traversal-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#query-editor').inputValue(), /Incoming<DependsOnEdge, ServiceNode>/);
+    assert.match(await page.locator('#sql-output code').textContent(), /MATCH/);
+    assert.match(await page.locator('#anatomy-summary').textContent(), /1 graph hop/);
+    console.log('PASS relationship selection updates editor, real MATCH SQL and graph anatomy');
+
+    const invalidQuery = await page.locator('#query-editor').inputValue();
+    await page.locator('#query-editor').fill(invalidQuery.replace('Incoming<DependsOnEdge, ServiceNode>', 'Outgoing<DependsOnEdge, ServiceNode>'));
+    await page.locator('#run-query').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
+    console.log('PASS unmapped direction cannot become verified SQL');
 
     await page.locator('#verified-filter-state').selectOption('Inactive');
     await page.locator('#verified-filter-skip').fill('37');

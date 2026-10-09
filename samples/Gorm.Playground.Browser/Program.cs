@@ -14,4 +14,10 @@ public static partial class Program
 
     [JSExport]
     public static string ExplainIntent(string json) => PlaygroundQueryEngine.ExplainIntentJson(json);
+
+    [JSExport]
+    public static string TraversalCatalog() => PlaygroundQueryEngine.GetTraversalCatalogJson();
+
+    [JSExport]
+    public static string ExplainTraversal(string json) => PlaygroundQueryEngine.ExplainTraversalJson(json);
 }

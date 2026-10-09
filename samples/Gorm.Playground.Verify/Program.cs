@@ -64,3 +64,56 @@ foreach (var invalid in invalidIntents)
         Console.WriteLine("PASS invalid intent rejected");
     }
 }
+
+
+// Real model-derived route coverage. Every incoming/outgoing shape is exercised with varied IDs.
+var routes = PlaygroundQueryEngine.GetTraversalCatalog();
+if (routes.Count != 6)
+{
+    throw new InvalidOperationException($"Expected six mapped Playground routes, got {routes.Count}.");
+}
+
+Console.WriteLine($"PASS TRAVERSAL CATALOG: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(PlaygroundQueryEngine.GetTraversalCatalogJson()))}");
+for (var index = 0; index < 120; index++)
+{
+    var route = routes[index % routes.Count];
+    var id = Guid.Parse($"00000000-0000-0000-0000-{index + 1:x12}");
+    var intent = new PlaygroundTraversalIntent(2, route.Root, route.Direction, route.Edge, route.Target, id);
+    var json = System.Text.Json.JsonSerializer.Serialize(intent, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    var explained = PlaygroundQueryEngine.ExplainTraversalJson(json);
+    if (!explained.Contains("MATCH", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException($"Mapped traversal {index} failed to generate real SQL MATCH.");
+    }
+
+    Console.WriteLine($"PASS TRAVERSAL {index}: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(explained))}");
+}
+
+string[] invalidTraversals =
+[
+    "{}",
+    "[]",
+    """{"version":1,"root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"PersonNode","direction":"incoming","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"PersonNode","direction":"outgoing","edge":"DependsOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"FakeNode","direction":"outgoing","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","target":"FakeNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"invalid"}""",
+    """{"version":2,"root":"PersonNode","direction":"reverse","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":2,"root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001","eval":true}""",
+    """{"version":2,"root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","edge":"DependsOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}""",
+    """{"version":"2","root":"PersonNode","direction":"outgoing","edge":"WorksOnEdge","target":"ProjectNode","nodeId":"00000000-0000-0000-0000-000000000001"}"""
+];
+
+foreach (var invalid in invalidTraversals)
+{
+    try
+    {
+        _ = PlaygroundQueryEngine.ExplainTraversalJson(invalid);
+        throw new InvalidOperationException($"An invalid traversal was unexpectedly accepted: {invalid}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine("PASS invalid traversal rejected");
+    }
+}

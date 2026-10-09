@@ -13,10 +13,17 @@
       const exports=await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
       const explain=exports.Gorm?.Playground?.Browser?.Program?.ExplainPreset;
       const explainIntent=exports.Gorm?.Playground?.Browser?.Program?.ExplainIntent;
-      if(typeof explain!=='function'||typeof explainIntent!=='function')throw new Error('GORM ExplainPreset/ExplainIntent export is missing');
+      const explainTraversal=exports.Gorm?.Playground?.Browser?.Program?.ExplainTraversal;
+      const getTraversalCatalog=exports.Gorm?.Playground?.Browser?.Program?.TraversalCatalog;
+      if(typeof explain!=='function'||typeof explainIntent!=='function'
+        ||typeof explainTraversal!=='function'||typeof getTraversalCatalog!=='function')
+        throw new Error('Required GORM Explain/traversal exports are missing');
+      const traversalCatalog=JSON.parse(getTraversalCatalog());
+      if(!Array.isArray(traversalCatalog)||!traversalCatalog.length)throw new Error('GORM model returned no traversable graph routes');
       await runtime.runMain();
 
       window.GormPlaygroundEngine={
+        traversalCatalog,
         metadata:{
           id:'gorm-wasm-hybrid',
           label:'GORM Explain() + preview',
@@ -29,6 +36,20 @@
           const preview=window.GormPreviewEngine.translate(query);
           const example=(window.GormPlaygroundExamples??[]).find(item=>supported.has(item.key)&&normalize(item.query)===normalize(query));
           if(!example){
+            const traversal=window.GormPlaygroundTraversals?.parse(query);
+            if(traversal){
+              const explained=JSON.parse(explainTraversal(JSON.stringify(traversal)));
+              if(typeof explained.sql!=='string'||!Array.isArray(explained.parameters))throw new Error('GORM traversal contract failed.');
+              return {
+                ...preview,
+                ok:true,
+                sql:explained.sql,
+                parameters:explained.parameters,
+                authoritative:true,
+                notes:['Translated by real GORM Explain() with a route verified against the .NET graph model.',
+                  'Incoming/outgoing direction and node GUID are validated independently in WebAssembly.']
+              };
+            }
             // Strictly parse the bounded LINQ shape, then validate AGAIN inside the .NET provider.
             // Non-matching C# is NEVER passed to the runtime or labelled as authoritative.
             const intent=window.GormPlaygroundEditable?.parse(query);
