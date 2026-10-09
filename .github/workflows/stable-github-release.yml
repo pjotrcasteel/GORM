@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/stable-github-release.yml'
       - '.github/scripts/verify_stable_release_source.py'
+      - '.github/scripts/test_verify_stable_release_source.py'
       - '.github/releases/3.2.0.md'
       - 'validate.py'
   workflow_dispatch:
@@ -35,6 +36,7 @@ jobs:
       - name: Validate verifier syntax and governance policy
         run: |
           python3 -m py_compile .github/scripts/verify_stable_release_source.py
+          python3 -m unittest discover -s .github/scripts -p 'test_verify_stable_release_source.py' -v
           python3 validate.py
 
   github-release:
