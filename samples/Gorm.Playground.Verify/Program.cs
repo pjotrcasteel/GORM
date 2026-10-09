@@ -232,3 +232,54 @@ foreach (var invalid in invalidPredicates)
         Console.WriteLine("PASS invalid mapped predicate rejected");
     }
 }
+
+
+// v0.2.5: bounded Name AND State expression, with independent native vs browser provider parity.
+for (var index = 0; index < 120; index++)
+{
+    var intent = new PlaygroundCombinedPredicateIntent(5, "ServiceNode", $"Service {index}",
+        index % 2 == 0 ? "Active" : "Inactive", "and", "Name", index * 71 % 10001, index % 100 + 1);
+    var json = System.Text.Json.JsonSerializer.Serialize(intent,
+        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    var result = PlaygroundQueryEngine.ExplainCombinedPredicateJson(json);
+    using var parsed = System.Text.Json.JsonDocument.Parse(result);
+    var sql = parsed.RootElement.GetProperty("sql").GetString() ?? "";
+    if (!sql.Contains("SELECT", StringComparison.OrdinalIgnoreCase) || !sql.Contains("AND", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException($"Expected an AND predicate in real GORM SQL for case {index}.");
+    }
+
+    Console.WriteLine($"PASS COMBINED {index}: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(result))}");
+}
+
+string[] invalidCombined =
+[
+    "{}",
+    "[]",
+    """{"version":4,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"PersonNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Unknown","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing!","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"State","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":-1,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":101}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25,"eval":true}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","state":"Inactive","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":"5","root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":5,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":"0","take":25}"""
+];
+
+foreach (var invalid in invalidCombined)
+{
+    try
+    {
+        _ = PlaygroundQueryEngine.ExplainCombinedPredicateJson(invalid);
+        throw new InvalidOperationException($"Unsupported combined predicate accepted: {invalid}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine("PASS invalid combined intent rejected");
+    }
+}
