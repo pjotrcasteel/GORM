@@ -16,6 +16,13 @@ const traversalCatalogLine = reference.match(/^PASS TRAVERSAL CATALOG: ([A-Za-z0
 assert.ok(traversalCatalogLine, 'Native GORM must supply an actual mapped graph route catalog');
 const nativeTraversalRoutes = JSON.parse(Buffer.from(traversalCatalogLine[1], 'base64').toString('utf8'));
 assert.equal(nativeTraversalRoutes.length, 6, 'Playground must expose exactly the six mapped single-hop directions');
+const pathCases = new Map([...reference.matchAll(/^PASS PATH (\d+): ([A-Za-z0-9+/=]+)$/gm)]
+  .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+const pathCatalogLine = reference.match(/^PASS PATH CATALOG: ([A-Za-z0-9+/=]+)$/m);
+assert.ok(pathCatalogLine, 'Native GORM must supply mapped two-hop graph path catalog');
+const nativePaths = JSON.parse(Buffer.from(pathCatalogLine[1], 'base64').toString('utf8'));
+assert.equal(nativePaths.length, 4, 'Playground must expose exactly four validated two-hop routes');
+assert.equal(pathCases.size, 120, 'Native GORM must produce 120 independent two-hop Explain results.');
 assert.equal(traversalCases.size, 120, 'Native GORM must produce 120 independent graph traversal results.');
 assert.equal(intentCases.size, 120, 'Native GORM must produce 120 independent bounded intent results.');
 assert.equal(expected.size, 4, 'Native GORM Explain() output must cover exactly four verified presets.');
@@ -67,6 +74,10 @@ async function start() {
     await page.locator('#enable-real-gorm').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()', null,
       { timeout: 90_000 });
+
+    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.3/);
+    assert.match(await page.locator('#playground-release-id').textContent(), /GORM 3\.2\.0/);
+    console.log('PASS independently versioned Playground v0.2.3 visible in site header');
 
     const testReal = async (key, table) => {
       await page.locator('[data-example="' + key + '"]').click();
@@ -135,6 +146,39 @@ async function start() {
     await page.locator('#run-query').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
     console.log('PASS unmapped direction cannot become verified SQL');
+
+    const pathCatalog = await page.evaluate(() => window.GormPlaygroundEngine.pathCatalog);
+    assert.deepEqual(pathCatalog, nativePaths, 'Browser two-hop model catalog must equal native GORM routes');
+    for (const [index, native] of pathCases) {
+      const route = nativePaths[index % nativePaths.length];
+      const id = '00000000-0000-0000-0000-' + (index + 31).toString(16).padStart(12, '0');
+      const actual = await page.evaluate(intent => {
+        const query = window.GormPlaygroundPaths.format(intent);
+        const result = window.GormPlaygroundEngine.translate(query);
+        return {sql: result.sql, parameters: result.parameters, authoritative: result.authoritative};
+      }, {...route, version: 3, nodeId: id});
+      assert.equal(actual.authoritative, true, 'Validated path ' + index + ' must be authoritative');
+      assert.equal(actual.sql, native.sql, 'Native and browser two-hop SQL differ for path ' + index);
+      assert.deepEqual(actual.parameters, native.parameters, 'Two-hop SQL parameters differ for path ' + index);
+    }
+    console.log('PASS 120 two-hop path variants match real native GORM SQL and parameters');
+
+    await page.locator('#path-root').selectOption('DatabaseNode');
+    await page.locator('#path-second').selectOption('outgoing|RoutesToEdge|ServiceNode');
+    await page.locator('#path-id').fill('00000000-0000-0000-0000-000000000031');
+    await page.locator('#path-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#query-editor').inputValue(), /ThenOutgoing<RoutesToEdge, ServiceNode>/);
+    assert.match(await page.locator('#sql-output code').textContent(), /MATCH/);
+    assert.match(await page.locator('#anatomy-summary').textContent(), /2 graph hops/);
+    console.log('PASS two-hop dropdowns produce verified GORM MATCH and graph-anatomy display');
+
+    const corrupted = (await page.locator('#query-editor').inputValue())
+      .replace('ThenOutgoing<RoutesToEdge, ServiceNode>', 'ThenIncoming<WorksOnEdge, PersonNode>');
+    await page.locator('#query-editor').fill(corrupted);
+    await page.locator('#run-query').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
+    console.log('PASS mismatched two-hop model route never becomes authoritative');
 
     await page.locator('#verified-filter-state').selectOption('Inactive');
     await page.locator('#verified-filter-skip').fill('37');
