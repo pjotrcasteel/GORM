@@ -1,0 +1,114 @@
+name: GORM stable GitHub release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/stable-github-release.yml'
+      - '.github/scripts/verify_stable_release_source.py'
+      - '.github/releases/3.2.0.md'
+      - 'validate.py'
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Full 40-character source commit SHA from the successful stable NuGet publishing run'
+        type: string
+        required: true
+      confirmation:
+        description: 'Type exactly: release GORM 3.2.0'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gorm-3-2-stable-github-release
+  cancel-in-progress: false
+
+jobs:
+  validate-policy:
+    name: Validate stable GitHub release guards
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate verifier syntax and governance policy
+        run: |
+          python3 -m py_compile .github/scripts/verify_stable_release_source.py
+          python3 validate.py
+
+  github-release:
+    name: Verify published NuGet source and create v3.2.0
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.repository == 'pjotrcasteel/GORM'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate exact release authorization and source revision
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [[ "$RELEASE_CONFIRMATION" != "release GORM 3.2.0" ]]; then
+            echo "::error::The required stable GitHub release confirmation does not match."
+            exit 1
+          fi
+          if [[ ! "$SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ ]]; then
+            echo "::error::Provide the full 40-character package source commit SHA."
+            exit 1
+          fi
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          git merge-base --is-ancestor "$SOURCE_SHA" "$GITHUB_SHA"
+          test -f .github/releases/3.2.0.md
+          test "$(python3 -c "import xml.etree.ElementTree as E; print(E.parse('SemanticVersion.props').findtext('PropertyGroup/SemanticVersion'))")" = 3.2.0
+          if git ls-remote --exit-code --tags origin refs/tags/v3.2.0 >/dev/null 2>&1; then
+            echo "::error::Tag v3.2.0 already exists. Do not overwrite an immutable release tag."
+            exit 1
+          fi
+      - name: Fetch immutable public NuGet package and verify exact source commit
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/GORM.3.2.0.nupkg"
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error --location --max-time 60 \
+              https://api.nuget.org/v3-flatcontainer/gorm/3.2.0/gorm.3.2.0.nupkg -o "$package"; then
+              break
+            fi
+            echo "GORM 3.2.0 is not yet available on the public NuGet CDN, attempt $attempt/20."
+            sleep 30
+          done
+          test -s "$package"
+          python3 .github/scripts/verify_stable_release_source.py "$package" 3.2.0 "$SOURCE_SHA"
+      - name: Independently restore and run published GORM from NuGet.org
+        run: bash .github/scripts/verify_package_consumer.sh 3.2.0 unused public
+      - name: Create source-pinned stable GitHub release exactly once
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if gh release view v3.2.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::GitHub release v3.2.0 already exists; do not overwrite."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin refs/tags/v3.2.0 >/dev/null 2>&1; then
+            echo "::error::Tag v3.2.0 appeared while the package was being verified. Inspect it manually."
+            exit 1
+          fi
+          gh release create v3.2.0 --repo "$GITHUB_REPOSITORY" \
+            --target "$SOURCE_SHA" --latest \
+            --title "GORM 3.2.0" --notes-file .github/releases/3.2.0.md
+          echo "### Published GitHub release v3.2.0 at $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
