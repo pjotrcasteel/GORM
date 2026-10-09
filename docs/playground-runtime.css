@@ -7,3 +7,13 @@
 .verified-filter-controls select{width:110px}.verified-filter-controls button{min-height:34px}
 #verified-filter-error{flex-basis:100%;color:var(--rose);font-size:.7rem}#verified-filter-error:empty{display:none}
 @media(max-width:650px){.verified-filter-controls>div{flex-basis:100%}.verified-filter-controls button{flex:1 1 100%}}
+
+.verified-traversal-controls{background:#11151b;border-color:rgba(183,151,255,.44)}
+.verified-traversal-controls strong{color:var(--violet)}
+.verified-traversal-controls #traversal-root{min-width:128px;width:auto;max-width:180px}
+.verified-traversal-controls #traversal-route{min-width:190px;width:auto;max-width:260px}
+.verified-traversal-controls #traversal-id{min-width:225px;width:225px;max-width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.verified-traversal-controls select:disabled,.verified-traversal-controls input:disabled,
+.verified-traversal-controls button:disabled{opacity:.5;cursor:not-allowed}
+#traversal-error{flex-basis:100%;color:var(--rose);font-size:.7rem}#traversal-error:empty{display:none}
+@media(max-width:650px){.verified-traversal-controls label{flex:1 1 135px}.verified-traversal-controls #traversal-id{width:100%;min-width:170px}}
