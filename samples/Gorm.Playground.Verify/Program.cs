@@ -283,3 +283,52 @@ foreach (var invalid in invalidCombined)
         Console.WriteLine("PASS invalid combined intent rejected");
     }
 }
+
+
+// v0.2.6: OR uses real GORM provider SQL, with the v5 AND contract remaining unchanged.
+for (var index = 0; index < 120; index++)
+{
+    var intent = new PlaygroundCombinedPredicateIntent(6, "ServiceNode", $"Service {index}",
+        index % 2 == 0 ? "Active" : "Inactive", "or", "Name", index * 83 % 10001, index % 100 + 1);
+    var json = System.Text.Json.JsonSerializer.Serialize(intent,
+        new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+    var result = PlaygroundQueryEngine.ExplainCombinedPredicateJson(json);
+    using var parsed = System.Text.Json.JsonDocument.Parse(result);
+    var sql = parsed.RootElement.GetProperty("sql").GetString() ?? "";
+    if (!sql.Contains("SELECT", StringComparison.OrdinalIgnoreCase) || !sql.Contains(" OR ", StringComparison.OrdinalIgnoreCase))
+    {
+        throw new InvalidOperationException($"Expected real GORM OR SQL for case {index}.");
+    }
+
+    Console.WriteLine($"PASS OR {index}: {Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(result))}");
+}
+
+string[] invalidLogicalOr =
+[
+    "{}",
+    "[]",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"and","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":6,"root":"PersonNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Pending","logic":"or","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing!","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"xor","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"State","skip":0,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":-1,"take":25}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":101}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25,"unsafe":true}""",
+    """{"version":6,"root":"ServiceNode","name":"Billing API","name":"Hacked","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25}""",
+    """{"version":"6","root":"ServiceNode","name":"Billing API","state":"Active","logic":"or","orderBy":"Name","skip":0,"take":25}"""
+];
+
+foreach (var invalid in invalidLogicalOr)
+{
+    try
+    {
+        _ = PlaygroundQueryEngine.ExplainCombinedPredicateJson(invalid);
+        throw new InvalidOperationException($"Unsupported OR predicate was accepted: {invalid}");
+    }
+    catch (NotSupportedException)
+    {
+        Console.WriteLine("PASS invalid OR intent rejected");
+    }
+}
