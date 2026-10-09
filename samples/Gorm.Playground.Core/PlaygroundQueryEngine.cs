@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Gorm.Application.Context;
 using Gorm.Application.Diagnostics;
 using Gorm.Application.Querying;
@@ -15,6 +16,26 @@ public static class PlaygroundQueryEngine
     private static readonly Guid ExampleId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     public static IReadOnlyList<string> SupportedExamples { get; } = ["outgoing", "incoming", "chained", "filter"];
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    /// <summary>Evaluate a validated v1 query intent with GORM's actual LINQ provider.</summary>
+    public static PlaygroundExplainResponse ExplainIntent(string json)
+    {
+        var intent = PlaygroundQueryIntent.Parse(json);
+        var state = intent.State == "Active" ? ServiceState.Active : ServiceState.Inactive;
+        var context = new PlaygroundGraphContext();
+
+        var explanation = context.Set<ServiceNode>().Where(x => x.State == state)
+            .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain();
+
+        var parameters = explanation.Parameters.Select(parameter =>
+            new PlaygroundBoundParameter(parameter.Name, parameter.Value, parameter.DbType?.ToString())).ToArray();
+        return new PlaygroundExplainResponse(explanation.Sql, parameters, explanation.DebugView);
+    }
+
+    /// <summary>JSON bridge shared by native parity tests and browser WebAssembly.</summary>
+    public static string ExplainIntentJson(string json) => JsonSerializer.Serialize(ExplainIntent(json), JsonOptions);
 
     public static string Explain(string example)
     {

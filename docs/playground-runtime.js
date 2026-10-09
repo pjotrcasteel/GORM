@@ -21,7 +21,7 @@
       const title=note.querySelector('strong');
       const text=note.querySelector('p');
       if(title)title.textContent=authoritative?'Verified GORM translator':'Documentation preview';
-      if(text)text.textContent=authoritative?'This specific preset was translated using the real GORM Explain() running locally in .NET WebAssembly. The query is a bounded example; arbitrary C# edits still use a clearly identified preview.':'This query is being shown through the illustrative JavaScript translator. Only four unmodified, verified presets use real .NET GORM SQL; no remote execution or database connection is used.';
+      if(text)text.textContent=authoritative?'This supported query was translated with actual GORM Explain() in local .NET WebAssembly. Editable state/page filters are strictly validated; arbitrary C# is never executed.':'This query is an illustrative JavaScript preview. Four presets and supported bounded state/page edits can use real GORM SQL after enabling the local .NET runtime; arbitrary C# is never executed.';
     }
   }
 
@@ -82,7 +82,7 @@
     });
   }
 
-  function renderInspector(model,authoritative=false){
+  function renderInspector(model,authoritative=false,boundParameters=[]){
     const pipeline=document.getElementById('translation-pipeline');
     const diagnostics=document.getElementById('query-diagnostics');
     if(!pipeline||!diagnostics)return;
@@ -108,9 +108,19 @@
     const parameters=[];
     if(model.predicate?.parameter)parameters.push([`@${model.predicate.parameter}`,model.predicate.display??model.predicate.parameter,'Predicate']);
     if(model.asOf)parameters.push([`@${model.asOf}`,model.asOf,'Temporal point']);
-    if(authoritative){
+    if(authoritative&&boundParameters.length){
+      const table=document.createElement('div');table.className='parameter-list';
+      boundParameters.forEach(parameter=>{
+        const row=document.createElement('div');
+        const code=document.createElement('code');code.textContent=parameter.name;
+        const span=document.createElement('span');span.textContent=parameter.value===null?'null':String(parameter.value);
+        const small=document.createElement('small');small.textContent=parameter.dbType??'Provider value';
+        row.append(code,span,small);table.appendChild(row);
+      });
+      diagnostics.appendChild(table);
+    }else if(authoritative){
       const info=document.createElement('p');
-      info.textContent='GORM assigns SQL parameter names such as @p0. This preset uses fixed demonstration values; no user expression is compiled.';
+      info.textContent='GORM returned no bound parameters for this query. Values shown here are never inferred from illustrative SQL.';
       diagnostics.appendChild(info);
     }else if(parameters.length){
       const table=document.createElement('div');table.className='parameter-list';
@@ -152,7 +162,7 @@
       });
     }
     renderAnatomy(result.model);
-    renderInspector(result.model,result.authoritative===true);
+    renderInspector(result.model,result.authoritative===true,result.parameters??[]);
     renderEngineStatus(result.authoritative===true);
     if(status)status.textContent=result.ok?(result.authoritative===true?'Verified GORM Explain() SQL':'Documentation preview SQL'):'Translator needs a supported GORM query root';
   }
