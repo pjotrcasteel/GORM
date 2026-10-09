@@ -11,4 +11,7 @@ public static partial class Program
 
     [JSExport]
     public static string ExplainPreset(string preset) => PlaygroundQueryEngine.Explain(preset);
+
+    [JSExport]
+    public static string ExplainIntent(string json) => PlaygroundQueryEngine.ExplainIntentJson(json);
 }
