@@ -93,6 +93,32 @@ public static class PlaygroundQueryEngine
         (field.Root, field.Property) is ("PersonNode", "Name") or ("ProjectNode", "Name")
             or ("ServiceNode", "Name") or ("DatabaseNode", "Name") or ("ServiceNode", "State");
 
+    /// <summary>Combine two mapped ServiceNode equality predicates in a single real-GORM LINQ expression.</summary>
+    public static PlaygroundExplainResponse ExplainCombinedPredicate(string json)
+    {
+        var intent = PlaygroundCombinedPredicateIntent.Parse(json);
+        var fields = GetPredicateCatalog();
+        if (!fields.Any(field => field.Root == "ServiceNode" && field.Property == "Name")
+            || !fields.Any(field => field.Root == "ServiceNode" && field.Property == "State"))
+        {
+            throw new NotSupportedException("Name and State must both be present in the GORM ServiceNode mapping.");
+        }
+
+        var name = intent.Name;
+        var state = intent.State == "Active" ? ServiceState.Active : ServiceState.Inactive;
+        var context = new PlaygroundGraphContext();
+        var explanation = context.Set<ServiceNode>()
+            .Where(x => x.Name == name && x.State == state)
+            .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain();
+
+        return new PlaygroundExplainResponse(explanation.Sql,
+            [.. explanation.Parameters.Select(parameter =>
+                new PlaygroundBoundParameter(parameter.Name, parameter.Value, parameter.DbType?.ToString()))],
+            explanation.DebugView);
+    }
+
+    public static string ExplainCombinedPredicateJson(string json) => JsonSerializer.Serialize(ExplainCombinedPredicate(json), JsonOptions);
+
     /// <summary>Routes are discovered from the actual GORM model, not invented by the browser.</summary>
     public static IReadOnlyList<PlaygroundTraversalRoute> GetTraversalCatalog()
     {

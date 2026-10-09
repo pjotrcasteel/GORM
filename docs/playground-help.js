@@ -63,7 +63,7 @@
   }
 
   function setup(){
-    addHelp('.verified-filter-controls:not(.verified-traversal-controls):not(.verified-path-controls):not(.verified-predicate-controls)',
+    addHelp('.verified-filter-controls:not(.verified-traversal-controls):not(.verified-path-controls):not(.verified-predicate-controls):not(.verified-combined-controls)',
       'verified-filter-apply',fillLegacyFilter);
     addHelp('.verified-traversal-controls','traversal-apply',fillSingleHop,
       ()=>Array.isArray(window.GormPlaygroundEngine?.traversalCatalog)
