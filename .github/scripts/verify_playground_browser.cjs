@@ -240,6 +240,10 @@ async function start() {
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
     const combinedSql = await page.locator('#sql-output code').textContent();
     assert.match(combinedSql, / AND /i);
+    const anatomy = await page.locator('#anatomy-flow').textContent();
+    assert.match(anatomy, /Name == Billing API/);
+    assert.match(anatomy, /State == Active/);
+    assert.match(await page.locator('#translation-pipeline').textContent(), /Name == Billing API AND State == Active/);
     assert.match(await page.locator('#query-editor').inputValue(),
       /x.Name == "Billing API" && x.State == ServiceState.Active/);
     console.log('PASS combined Help me fills valid AND query, but only explicit Analyze executes it');
