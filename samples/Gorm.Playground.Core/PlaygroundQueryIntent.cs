@@ -28,10 +28,11 @@ public sealed record PlaygroundQueryIntent(int Version, string Root, string Stat
             }
         }
 
-        if (fields.Count != Fields.Count || !fields["version"].TryGetInt32(out var version)
-            || fields["root"].ValueKind != JsonValueKind.String || fields["state"].ValueKind != JsonValueKind.String
-            || fields["orderBy"].ValueKind != JsonValueKind.String || !fields["skip"].TryGetInt32(out var skip)
-            || !fields["take"].TryGetInt32(out var take))
+        if (fields.Count != Fields.Count || fields["version"].ValueKind != JsonValueKind.Number
+            || !fields["version"].TryGetInt32(out var version) || fields["root"].ValueKind != JsonValueKind.String
+            || fields["state"].ValueKind != JsonValueKind.String || fields["orderBy"].ValueKind != JsonValueKind.String
+            || fields["skip"].ValueKind != JsonValueKind.Number || !fields["skip"].TryGetInt32(out var skip)
+            || fields["take"].ValueKind != JsonValueKind.Number || !fields["take"].TryGetInt32(out var take))
         {
             throw new NotSupportedException("Playground intent requires version, root, state, orderBy, skip and take with exact types.");
         }
