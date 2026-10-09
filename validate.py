@@ -14,6 +14,10 @@ required = [
     ".github/releases/3.1.0-preview.1.md",
     ".github/releases/3.2.0-preview.1.md",
     ".github/workflows/first-github-prerelease.yml",
+    ".github/workflows/stable-github-release.yml",
+    ".github/releases/3.2.0.md",
+    ".github/scripts/verify_stable_release_source.py",
+    ".github/scripts/test_verify_stable_release_source.py",
     ".github/workflows/verify-public-nuget.yml",
     ".github/workflows/nuget-preview.yml",
     ".github/workflows/nuget-stable.yml",
@@ -126,4 +130,24 @@ for guard in ("gh release create", "--target", "--prerelease", "contents: write"
         raise SystemExit(f"GitHub prerelease provenance guard missing: {guard}")
 if "dotnet nuget push" in first_release or "nuget push" in first_release:
     raise SystemExit("GitHub prerelease workflow must not publish NuGet packages.")
+# Stable GitHub release is a separate, dispatch-only operation after public NuGet verification.
+stable_release = (ROOT / ".github/workflows/stable-github-release.yml").read_text(encoding="utf-8")
+for guard in (
+    "github.event_name == 'workflow_dispatch'",
+    "github.ref == 'refs/heads/main'",
+    "github.repository == 'pjotrcasteel/GORM'",
+    'release GORM 3.2.0',
+    "git merge-base --is-ancestor",
+    "verify_stable_release_source.py",
+    "verify_package_consumer.sh 3.2.0 unused public",
+    "gh release create v3.2.0",
+    "--target \"$SOURCE_SHA\"",
+    "--notes-file .github/releases/3.2.0.md",
+    "contents: write",
+):
+    if guard not in stable_release:
+        raise SystemExit(f"Missing source-pinned stable GitHub release guard: {guard}")
+if "dotnet nuget push" in stable_release or "NuGet/login@" in stable_release:
+    raise SystemExit("GitHub release workflow must never publish to NuGet.org.")
+
 print("GORM public site, release governance, package metadata and independent source layout validated.")
