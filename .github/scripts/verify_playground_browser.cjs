@@ -8,7 +8,7 @@ const root = path.resolve(process.argv[2] ?? '');
 const reference = fs.readFileSync(process.argv[3], 'utf8');
 const expected = new Map([...reference.matchAll(/^PASS (outgoing|incoming|chained|filter): (.*)$/gm)].map(match => [match[1], match[2]]));
 const normalize = text => text.replace(/\s+/g, ' ').trim();
-const intentCases = new Map([...reference.matchAll(/^PASS INTENT (\\d+): ([A-Za-z0-9+/=]+)$/gm)]
+const intentCases = new Map([...reference.matchAll(/^PASS INTENT (\d+): ([A-Za-z0-9+/=]+)$/gm)]
   .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
 assert.equal(intentCases.size, 120, 'Native GORM must produce 120 independent bounded intent results.');
 assert.equal(expected.size, 4, 'Native GORM Explain() output must cover exactly four verified presets.');
@@ -108,7 +108,7 @@ async function start() {
     assert.match(await page.locator('#query-editor').inputValue(), /ServiceState.Inactive/);
     console.log('PASS editable controls use real GORM SQL and update editor');
 
-    await page.locator('#query-editor').fill((await page.locator('#query-editor').inputValue()) + '\\nSystem.IO.File.Delete("unsafe");');
+    await page.locator('#query-editor').fill((await page.locator('#query-editor').inputValue()) + '\nSystem.IO.File.Delete("unsafe");');
     await page.locator('#run-query').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
     console.log('PASS unsupported arbitrary C# is never authoritative');
