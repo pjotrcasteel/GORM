@@ -56,6 +56,9 @@
               if(typeof explained.sql!=='string'||!Array.isArray(explained.parameters))throw new Error('GORM combined Explain contract failed.');
               return {
                 ...preview,
+                model:{...preview.model, predicate:null, combinedPredicates:[
+                  {column:'Name',value:combined.name},{column:'State',value:combined.state}
+                ]},
                 ok:true,
                 sql:explained.sql,
                 parameters:explained.parameters,
