@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'samples/Gorm.Playground.*/**'
+      - 'docs/playground*'
+      - '.github/scripts/verify_playground_browser.cjs'
       - 'src/**'
       - '.github/workflows/playground-wasm-validation.yml'
       - 'Directory.*.props'
@@ -10,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'samples/Gorm.Playground.*/**'
+      - 'docs/playground*'
+      - '.github/scripts/verify_playground_browser.cjs'
       - 'src/**'
       - '.github/workflows/playground-wasm-validation.yml'
   workflow_dispatch:
