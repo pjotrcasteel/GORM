@@ -30,6 +30,9 @@ const nativePredicateFields = JSON.parse(Buffer.from(predicateCatalogLine[1], 'b
 assert.equal(nativePredicateFields.length, 5, 'Mapped GORM property catalog should have four names and ServiceNode.State');
 const combinedCases = new Map([...reference.matchAll(/^PASS COMBINED (\d+): ([A-Za-z0-9+/=]+)$/gm)]
   .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+const logicalOrCases = new Map([...reference.matchAll(/^PASS OR (\d+): ([A-Za-z0-9+/=]+)$/gm)]
+  .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+assert.equal(logicalOrCases.size, 120, 'Native GORM must produce 120 combined OR Explain results.');
 assert.equal(combinedCases.size, 120, 'Native GORM must produce 120 combined AND Explain results.');
 assert.equal(predicateCases.size, 120, 'Native GORM must produce 120 mapped predicate Explain results.');
 assert.equal(pathCases.size, 120, 'Native GORM must produce 120 independent two-hop Explain results.');
@@ -85,9 +88,9 @@ async function start() {
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()', null,
       { timeout: 90_000 });
 
-    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.5/);
+    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.6/);
     assert.match(await page.locator('#playground-release-id').textContent(), /GORM 3\.2\.0/);
-    console.log('PASS independently versioned Playground v0.2.5 visible in site header');
+    console.log('PASS independently versioned Playground v0.2.6 visible in site header');
 
     const testReal = async (key, table) => {
       await page.locator('[data-example="' + key + '"]').click();
@@ -248,10 +251,47 @@ async function start() {
       /x.Name == "Billing API" && x.State == ServiceState.Active/);
     console.log('PASS combined Help me fills valid AND query, but only explicit Analyze executes it');
 
-    await page.locator('#query-editor').fill((await page.locator('#query-editor').inputValue()).replace(' && ', ' || '));
+    for (const [index, native] of logicalOrCases) {
+      const intent = {
+        version: 6, root: 'ServiceNode', name: 'Service ' + index,
+        state: index % 2 === 0 ? 'Active' : 'Inactive', logic: 'or', orderBy: 'Name',
+        skip: index * 83 % 10001, take: index % 100 + 1
+      };
+      const actual = await page.evaluate(data => {
+        const query = window.GormPlaygroundCombined.format(data);
+        const result = window.GormPlaygroundEngine.translate(query);
+        return {sql: result.sql, parameters: result.parameters, authoritative: result.authoritative};
+      }, intent);
+      assert.equal(actual.authoritative, true, 'Combined OR query must be verified: ' + index);
+      assert.equal(actual.sql, native.sql, 'Native and browser OR SQL disagree: ' + index);
+      assert.deepEqual(actual.parameters, native.parameters, 'Native and browser OR parameters disagree: ' + index);
+    }
+    console.log('PASS 120 combined ServiceNode Name OR State native/WASM SQL and parameter parity cases');
+
+    const beforeOrHelper = await page.locator('#query-editor').inputValue();
+    await page.locator('#combined-logic').selectOption('or');
+    await page.locator('#combined-help-me').click();
+    assert.equal(await page.locator('#combined-logic').inputValue(), 'or', 'Help me should keep selected logical operator');
+    assert.equal(await page.locator('#query-editor').inputValue(), beforeOrHelper,
+      'OR Help me should fill inputs but not automatically execute');
+    await page.locator('#combined-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#query-editor').inputValue(), /x.Name == "Billing API" \|\| x.State == ServiceState.Active/);
+    assert.match(await page.locator('#sql-output code').textContent(), / OR /i);
+    assert.match(await page.locator('#anatomy-flow').textContent(), /OR/);
+    assert.match(await page.locator('#translation-pipeline').textContent(), /Name == Billing API OR State == Active/);
+    console.log('PASS OR builder and Help me preserve choice, require Analyze and render correct graph anatomy');
+
+    await page.locator('#combined-logic').selectOption('and');
+    await page.locator('#combined-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#query-editor').inputValue(), / && /);
+    console.log('PASS switching back to existing AND v5 remains authoritative');
+
+    await page.locator('#query-editor').fill((await page.locator('#query-editor').inputValue()).replace(' && ', ' xor '));
     await page.locator('#run-query').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
-    console.log('PASS unsupported logical OR never becomes authoritative from composite parser');
+    console.log('PASS unsupported logical XOR fails closed and never becomes authoritative');
 
     const beforeHelp = await page.locator('#query-editor').inputValue();
     await page.locator('#predicate-help-me').click();
