@@ -43,3 +43,12 @@
 .playground-help-hint{display:block;flex-basis:100%;color:var(--mint);font-size:.69rem}
 .playground-help-hint:empty{display:none}
 @media(max-width:650px){.verified-predicate-controls label{flex:1 1 120px}.verified-predicate-controls #predicate-value{width:100%;min-width:0}}
+
+.verified-combined-controls{background:#18151d;border-color:rgba(183,151,255,.44)}
+.verified-combined-controls strong{color:var(--violet)}
+.verified-combined-controls #combined-name{min-width:160px;width:175px;max-width:100%}
+.verified-combined-controls #combined-state{width:110px}
+.verified-combined-controls .combined-operator{font:800 .7rem ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--mint);padding:0 3px 8px}
+.verified-combined-controls :disabled{opacity:.5;cursor:not-allowed}
+#combined-error{flex-basis:100%;color:var(--mint);font-size:.7rem}#combined-error:empty{display:none}
+@media(max-width:650px){.verified-combined-controls label{flex:1 1 130px}.verified-combined-controls #combined-name{width:100%;min-width:0}.verified-combined-controls .combined-operator{align-self:end}}
