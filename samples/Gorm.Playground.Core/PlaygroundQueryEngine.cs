@@ -37,6 +37,62 @@ public static class PlaygroundQueryEngine
     /// <summary>JSON bridge shared by native parity tests and browser WebAssembly.</summary>
     public static string ExplainIntentJson(string json) => JsonSerializer.Serialize(ExplainIntent(json), JsonOptions);
 
+    /// <summary>Only offer fields that the active GORM model maps and the typed Explain translator supports.</summary>
+    public static IReadOnlyList<PlaygroundPredicateField> GetPredicateCatalog()
+    {
+        var model = new PlaygroundGraphContext().Model;
+        return [.. model.Nodes.SelectMany(node => node.Properties
+            .Where(property => (property.PropertyName == "Name" && property.PropertyType == typeof(string))
+                || (property.PropertyName == "State" && property.PropertyType == typeof(ServiceState)))
+            .Select(property => new PlaygroundPredicateField(node.ClrType.Name, property.PropertyName,
+                property.PropertyType == typeof(string) ? "string" : "enum")))
+            .Where(IsSupportedPredicate)
+            .OrderBy(field => field.Root, StringComparer.Ordinal)
+            .ThenBy(field => field.Property, StringComparer.Ordinal)];
+    }
+
+    public static string GetPredicateCatalogJson() => JsonSerializer.Serialize(GetPredicateCatalog(), JsonOptions);
+
+    /// <summary>Validate against actual mapped model metadata and compile strongly typed equality LINQ into real GORM SQL.</summary>
+    public static PlaygroundExplainResponse ExplainPredicate(string json)
+    {
+        var intent = PlaygroundPredicateIntent.Parse(json);
+        if (!GetPredicateCatalog().Any(field => field.Root == intent.Root && field.Property == intent.Property))
+        {
+            throw new NotSupportedException("This predicate is not mapped by the current GORM model.");
+        }
+
+        var context = new PlaygroundGraphContext();
+        var value = intent.Value;
+        var state = value == "Active" ? ServiceState.Active : ServiceState.Inactive;
+        var explanation = (intent.Root, intent.Property) switch
+        {
+            ("PersonNode", "Name") => context.Set<PersonNode>().Where(x => x.Name == value)
+                .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
+            ("ProjectNode", "Name") => context.Set<ProjectNode>().Where(x => x.Name == value)
+                .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
+            ("ServiceNode", "Name") => context.Set<ServiceNode>().Where(x => x.Name == value)
+                .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
+            ("DatabaseNode", "Name") => context.Set<DatabaseNode>().Where(x => x.Name == value)
+                .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
+            ("ServiceNode", "State") => context.Set<ServiceNode>()
+                .Where(x => x.State == state)
+                .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain(),
+            _ => throw new NotSupportedException("No executable GORM predicate translator exists for this model field.")
+        };
+
+        return new PlaygroundExplainResponse(explanation.Sql,
+            [.. explanation.Parameters.Select(parameter =>
+                new PlaygroundBoundParameter(parameter.Name, parameter.Value, parameter.DbType?.ToString()))],
+            explanation.DebugView);
+    }
+
+    public static string ExplainPredicateJson(string json) => JsonSerializer.Serialize(ExplainPredicate(json), JsonOptions);
+
+    private static bool IsSupportedPredicate(PlaygroundPredicateField field) =>
+        (field.Root, field.Property) is ("PersonNode", "Name") or ("ProjectNode", "Name")
+            or ("ServiceNode", "Name") or ("DatabaseNode", "Name") or ("ServiceNode", "State");
+
     /// <summary>Routes are discovered from the actual GORM model, not invented by the browser.</summary>
     public static IReadOnlyList<PlaygroundTraversalRoute> GetTraversalCatalog()
     {

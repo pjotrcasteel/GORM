@@ -22,6 +22,13 @@ const pathCatalogLine = reference.match(/^PASS PATH CATALOG: ([A-Za-z0-9+/=]+)$/
 assert.ok(pathCatalogLine, 'Native GORM must supply mapped two-hop graph path catalog');
 const nativePaths = JSON.parse(Buffer.from(pathCatalogLine[1], 'base64').toString('utf8'));
 assert.equal(nativePaths.length, 4, 'Playground must expose exactly four validated two-hop routes');
+const predicateCases = new Map([...reference.matchAll(/^PASS PREDICATE (\d+): ([A-Za-z0-9+/=]+)$/gm)]
+  .map(match => [Number(match[1]), JSON.parse(Buffer.from(match[2], 'base64').toString('utf8'))]));
+const predicateCatalogLine = reference.match(/^PASS PREDICATE CATALOG: ([A-Za-z0-9+/=]+)$/m);
+assert.ok(predicateCatalogLine, 'Native GORM must expose its validated predicate model fields');
+const nativePredicateFields = JSON.parse(Buffer.from(predicateCatalogLine[1], 'base64').toString('utf8'));
+assert.equal(nativePredicateFields.length, 5, 'Mapped GORM property catalog should have four names and ServiceNode.State');
+assert.equal(predicateCases.size, 120, 'Native GORM must produce 120 mapped predicate Explain results.');
 assert.equal(pathCases.size, 120, 'Native GORM must produce 120 independent two-hop Explain results.');
 assert.equal(traversalCases.size, 120, 'Native GORM must produce 120 independent graph traversal results.');
 assert.equal(intentCases.size, 120, 'Native GORM must produce 120 independent bounded intent results.');
@@ -75,9 +82,9 @@ async function start() {
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()', null,
       { timeout: 90_000 });
 
-    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.3/);
+    assert.match(await page.locator('#playground-release-id').textContent(), /Playground v0\.2\.4/);
     assert.match(await page.locator('#playground-release-id').textContent(), /GORM 3\.2\.0/);
-    console.log('PASS independently versioned Playground v0.2.3 visible in site header');
+    console.log('PASS independently versioned Playground v0.2.4 visible in site header');
 
     const testReal = async (key, table) => {
       await page.locator('[data-example="' + key + '"]').click();
@@ -179,6 +186,77 @@ async function start() {
     await page.locator('#run-query').click();
     await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Documentation preview');
     console.log('PASS mismatched two-hop model route never becomes authoritative');
+
+    const actualPredicateCatalog = await page.evaluate(() => window.GormPlaygroundEngine.predicateCatalog);
+    assert.deepEqual(actualPredicateCatalog, nativePredicateFields, 'Browser predicate catalog must match native mapped GORM model');
+    for (const [index, native] of predicateCases) {
+      const field = nativePredicateFields[index % nativePredicateFields.length];
+      const intent = {
+        version: 4, root: field.root, property: field.property,
+        value: field.property === 'State' ? (index % 2 === 0 ? 'Active' : 'Inactive') : 'Example ' + index,
+        orderBy: 'Name', skip: index * 37 % 10001, take: index % 100 + 1
+      };
+      const actual = await page.evaluate(data => {
+        const query = window.GormPlaygroundPredicates.format(data);
+        const result = window.GormPlaygroundEngine.translate(query);
+        return {sql: result.sql, parameters: result.parameters, authoritative: result.authoritative};
+      }, intent);
+      assert.equal(actual.authoritative, true, 'Mapped predicate must use authoritative GORM SQL: ' + index);
+      assert.equal(actual.sql, native.sql, 'Native and WASM mapped predicate SQL differ for ' + index);
+      assert.deepEqual(actual.parameters, native.parameters, 'Native and WASM mapped predicate values differ for ' + index);
+    }
+    console.log('PASS 120 model-aware Name/State predicate variants equal native GORM SQL and parameters');
+
+    const beforeHelp = await page.locator('#query-editor').inputValue();
+    await page.locator('#predicate-help-me').click();
+    assert.equal(await page.locator('#predicate-root').inputValue(), 'ServiceNode');
+    assert.equal(await page.locator('#predicate-property').inputValue(), 'Name');
+    assert.equal(await page.locator('#predicate-value').inputValue(), 'Billing API');
+    assert.equal(await page.locator('#query-editor').inputValue(), beforeHelp, 'Help me must never replace the editor on its own');
+    await page.locator('#predicate-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#sql-output code').textContent(), /SELECT/);
+    assert.match(await page.locator('#query-editor').inputValue(), /x.Name == "Billing API"/);
+    console.log('PASS guided mapped-predicate values require explicit Analyze click');
+
+    await page.locator('#predicate-root').selectOption('DatabaseNode');
+    await page.locator('#predicate-value').fill('Orders');
+    await page.locator('#predicate-apply').click();
+    await page.waitForFunction(() => document.querySelector('#sql-output code')?.textContent.includes('[dbo].[Databases]'));
+    console.log('PASS model-aware Name predicate works for another mapped graph root');
+
+    await page.locator('#predicate-root').selectOption('ServiceNode');
+    await page.locator('#predicate-property').selectOption('State');
+    await page.locator('#predicate-state').selectOption('Inactive');
+    await page.locator('#predicate-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    assert.match(await page.locator('#query-editor').inputValue(), /ServiceState.Inactive/);
+    console.log('PASS model-aware enum State equality remains provider-verified');
+
+    const beforeGuidedHop = await page.locator('#query-editor').inputValue();
+    await page.locator('.verified-traversal-controls .playground-help-button').click();
+    assert.equal(await page.locator('#traversal-root').inputValue(), 'PersonNode');
+    assert.equal(await page.locator('#traversal-id').inputValue(), '00000000-0000-0000-0000-000000000001');
+    assert.equal(await page.locator('#query-editor').inputValue(), beforeGuidedHop, 'One-hop Help me must not auto-execute');
+    await page.locator('#traversal-apply').click();
+    await page.waitForFunction(() => document.querySelector('#engine-authority')?.textContent === 'Verified GORM Explain()');
+    console.log('PASS one-hop Help me fills valid model route without auto-execution');
+
+    const beforeGuidedPath = await page.locator('#query-editor').inputValue();
+    await page.locator('.verified-path-controls .playground-help-button').click();
+    assert.equal(await page.locator('#path-root').inputValue(), 'ServiceNode');
+    assert.equal(await page.locator('#path-id').inputValue(), '00000000-0000-0000-0000-000000000001');
+    assert.equal(await page.locator('#query-editor').inputValue(), beforeGuidedPath, 'Two-hop Help me must not auto-execute');
+    await page.locator('#path-apply').click();
+    await page.waitForFunction(() => document.querySelector('#anatomy-summary')?.textContent.includes('2 graph hops'));
+    assert.match(await page.locator('#sql-output code').textContent(), /MATCH/);
+    console.log('PASS two-hop Help me fills valid GORM route and requires explicit Analyze');
+
+    await page.locator('#verified-filter-skip').fill('19');
+    await page.locator('.verified-filter-controls:not(.verified-path-controls):not(.verified-traversal-controls):not(.verified-predicate-controls) .playground-help-button').click();
+    assert.equal(await page.locator('#verified-filter-skip').inputValue(), '0');
+    assert.equal(await page.locator('#verified-filter-take').inputValue(), '25');
+    console.log('PASS original state filter Help me fills valid paging defaults');
 
     await page.locator('#verified-filter-state').selectOption('Inactive');
     await page.locator('#verified-filter-skip').fill('37');

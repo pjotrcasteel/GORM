@@ -26,4 +26,10 @@ public static partial class Program
 
     [JSExport]
     public static string ExplainPath(string json) => PlaygroundQueryEngine.ExplainPathJson(json);
+
+    [JSExport]
+    public static string PredicateCatalog() => PlaygroundQueryEngine.GetPredicateCatalogJson();
+
+    [JSExport]
+    public static string ExplainPredicate(string json) => PlaygroundQueryEngine.ExplainPredicateJson(json);
 }
