@@ -299,7 +299,7 @@ async function start() {
     console.log('PASS two-hop Help me fills valid GORM route and requires explicit Analyze');
 
     await page.locator('#verified-filter-skip').fill('19');
-    await page.locator('.verified-filter-controls:not(.verified-path-controls):not(.verified-traversal-controls):not(.verified-predicate-controls) .playground-help-button').click();
+    await page.locator('.verified-filter-controls:not(.verified-path-controls):not(.verified-traversal-controls):not(.verified-predicate-controls):not(.verified-combined-controls) .playground-help-button').click();
     assert.equal(await page.locator('#verified-filter-skip').inputValue(), '0');
     assert.equal(await page.locator('#verified-filter-take').inputValue(), '25');
     console.log('PASS original state filter Help me fills valid paging defaults');
