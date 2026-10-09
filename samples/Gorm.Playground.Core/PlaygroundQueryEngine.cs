@@ -107,9 +107,11 @@ public static class PlaygroundQueryEngine
         var name = intent.Name;
         var state = intent.State == "Active" ? ServiceState.Active : ServiceState.Inactive;
         var context = new PlaygroundGraphContext();
-        var explanation = context.Set<ServiceNode>()
-            .Where(x => x.Name == name && x.State == state)
-            .OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain();
+        var query = context.Set<ServiceNode>();
+        var filtered = intent.Logic == "and"
+            ? query.Where(x => x.Name == name && x.State == state)
+            : query.Where(x => x.Name == name || x.State == state);
+        var explanation = filtered.OrderBy(x => x.Name).Skip(intent.Skip).Take(intent.Take).Explain();
 
         return new PlaygroundExplainResponse(explanation.Sql,
             [.. explanation.Parameters.Select(parameter =>

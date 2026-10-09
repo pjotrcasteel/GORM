@@ -51,7 +51,7 @@
     if(model.predicate)flow.append(anatomyArrow(),anatomyStep('predicate','PREDICATE',`${model.predicate.column??'value'} == ${model.predicate.display??'…'}`));
     if(model.combinedPredicates?.length===2){
       model.combinedPredicates.forEach((predicate,index)=>{
-        flow.append(anatomyArrow(),anatomyStep('predicate',index===0?'PREDICATE':'AND',
+        flow.append(anatomyArrow(),anatomyStep('predicate',index===0?'PREDICATE':(model.combinedLogic??'and').toUpperCase(),
           predicate.column+' == '+predicate.value));
       });
     }
@@ -97,7 +97,7 @@
     const stages=[
       ['1','Expression root',model.root?`Resolve GraphSet<${model.root}>`:'Graph root missing'],
       ['2','Query scope',model.asOf?`Apply temporal point ${model.asOf}`:'Use current graph state'],
-      ['3','Scalar predicates',model.combinedPredicates?.length===2?model.combinedPredicates.map(p=>p.column+' == '+p.value).join(' AND '):model.predicate?`${model.predicate.column??'value'} == ${model.predicate.display??'…'}`:'No supported root predicate detected'],
+      ['3','Scalar predicates',model.combinedPredicates?.length===2?model.combinedPredicates.map(p=>p.column+' == '+p.value).join(' '+(model.combinedLogic??'and').toUpperCase()+' '):model.predicate?`${model.predicate.column??'value'} == ${model.predicate.display??'…'}`:'No supported root predicate detected'],
       ['4','Graph operation',model.traversals.length?`${model.traversals.length} typed traversal hop${model.traversals.length===1?'':'s'}`:model.include?`Materialize ${model.include}`:'Stay on node root'],
       ['5','Result shaping',[model.order&&`OrderBy(${model.order})`,model.skip!==null&&model.skip!==undefined&&`Skip(${model.skip})`,model.take!==null&&model.take!==undefined&&`Take(${model.take})`].filter(Boolean).join(' · ')||'No paging/order operators'],
       ['6','Provider shape',model.traversals.length?'SQL Server Graph MATCH':'Node-table SELECT']

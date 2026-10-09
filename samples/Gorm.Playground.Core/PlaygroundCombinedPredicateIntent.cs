@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Gorm.Playground.Core;
 
 /// <summary>
-/// A strict versioned two-predicate AND filter over mapped service Name and State.
+/// A strict versioned two-predicate AND (v5) or OR (v6) filter over mapped service Name and State.
 /// Never accepts executable C# or arbitrary JSON query trees.
 /// </summary>
 public sealed record PlaygroundCombinedPredicateIntent(int Version, string Root, string Name, string State, string Logic, string OrderBy, int Skip, int Take)
@@ -47,12 +47,13 @@ public sealed record PlaygroundCombinedPredicateIntent(int Version, string Root,
         var intent = new PlaygroundCombinedPredicateIntent(version, fields["root"].GetString()!, fields["name"].GetString()!,
             fields["state"].GetString()!, fields["logic"].GetString()!, fields["orderBy"].GetString()!, skip, take);
 
-        if (intent.Version != 5 || intent.Root != "ServiceNode" || intent.Logic != "and"
+        if (!((intent.Version == 5 && intent.Logic == "and") || (intent.Version == 6 && intent.Logic == "or"))
+            || intent.Root != "ServiceNode"
             || intent.OrderBy != "Name" || intent.State is not ("Active" or "Inactive")
             || intent.Skip is < 0 or > 10000 || intent.Take is < 1 or > 100
             || intent.Name.Length is < 1 or > 64 || !intent.Name.All(IsSafeCharacter))
         {
-            throw new NotSupportedException("Only Name AND State equality on mapped services, ordered by Name with bounded paging, is supported.");
+            throw new NotSupportedException("Only v5 Name AND State or v6 Name OR State equality on mapped services, ordered by Name with bounded paging, is supported.");
         }
 
         return intent;

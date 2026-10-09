@@ -1,8 +1,8 @@
 (()=>{
   'use strict';
 
-  // A single whole-query C# shape: two equality predicates joined by &&. Never evaluate editor C#.
-  const grammar=/^\s*var\s+results\s*=\s*await\s+context\.Set\s*<\s*ServiceNode\s*>\s*\(\s*\)\s*\.Where\s*\(\s*x\s*=>\s*x\.Name\s*==\s*"([A-Za-z0-9 ._-]{1,64})"\s*&&\s*x\.State\s*==\s*ServiceState\.(Active|Inactive)\s*\)\s*\.OrderBy\s*\(\s*x\s*=>\s*x\.Name\s*\)\s*\.Skip\s*\(\s*(\d{1,5})\s*\)\s*\.Take\s*\(\s*(\d{1,3})\s*\)\s*\.ToListAsync\s*\(\s*\)\s*;\s*$/;
+  // A single whole-query C# shape: two equality predicates joined by validated && (v5) or || (v6). Never evaluate editor C#.
+  const grammar=/^\s*var\s+results\s*=\s*await\s+context\.Set\s*<\s*ServiceNode\s*>\s*\(\s*\)\s*\.Where\s*\(\s*x\s*=>\s*x\.Name\s*==\s*"([A-Za-z0-9 ._-]{1,64})"\s*(&&|\|\|)\s*x\.State\s*==\s*ServiceState\.(Active|Inactive)\s*\)\s*\.OrderBy\s*\(\s*x\s*=>\s*x\.Name\s*\)\s*\.Skip\s*\(\s*(\d{1,5})\s*\)\s*\.Take\s*\(\s*(\d{1,3})\s*\)\s*\.ToListAsync\s*\(\s*\)\s*;\s*$/;
   const safeName=/^[A-Za-z0-9 ._-]{1,64}$/;
 
   function mapped(){
@@ -15,21 +15,24 @@
     if(typeof query!=='string'||query.length>4096||!mapped())return null;
     const match=grammar.exec(query);
     if(!match)return null;
-    const skip=Number(match[3]),take=Number(match[4]);
+    const skip=Number(match[4]),take=Number(match[5]);
     if(skip>10000||take<1||take>100)return null;
-    return {version:5,root:'ServiceNode',name:match[1],state:match[2],logic:'and',orderBy:'Name',skip,take};
+    const logic=match[2]==='&&'?'and':'or';
+    return {version:logic==='and'?5:6,root:'ServiceNode',name:match[1],state:match[3],logic,orderBy:'Name',skip,take};
   }
 
   function format(intent){
-    if(!intent||!mapped()||intent.version!==5||intent.root!=='ServiceNode'||intent.logic!=='and'||intent.orderBy!=='Name'
+    if(!intent||!mapped()||!((intent.version===5&&intent.logic==='and')||(intent.version===6&&intent.logic==='or'))
+      ||intent.root!=='ServiceNode'||intent.orderBy!=='Name'
       ||typeof intent.name!=='string'||!safeName.test(intent.name)
       ||!['Active','Inactive'].includes(intent.state)
       ||!Number.isInteger(intent.skip)||intent.skip<0||intent.skip>10000
       ||!Number.isInteger(intent.take)||intent.take<1||intent.take>100){
       throw new RangeError('Select a mapped ServiceNode name, Active/Inactive state and paging window.');
     }
+    const operator=intent.logic==='and'?'&&':'||';
     return 'var results = await context.Set<ServiceNode>()\n'
-      +'    .Where(x => x.Name == "'+intent.name+'" && x.State == ServiceState.'+intent.state+')\n'
+      +'    .Where(x => x.Name == "'+intent.name+'" '+operator+' x.State == ServiceState.'+intent.state+')\n'
       +'    .OrderBy(x => x.Name)\n'
       +'    .Skip('+intent.skip+')\n'
       +'    .Take('+intent.take+')\n'
@@ -43,9 +46,9 @@
     panel.className='verified-filter-controls verified-combined-controls';
     panel.setAttribute('aria-label','Combined GORM ServiceNode predicates');
     panel.innerHTML='<div><strong>Combine two service filters</strong>'
-      +'<p id="combined-help">Enable real GORM SQL to filter by both service name AND state.</p></div>'
+      +'<p id="combined-help">Enable real GORM SQL and choose AND (both match) or OR (either matches).</p></div>'
       +'<label>Service name <input id="combined-name" type="text" maxlength="64" disabled></label>'
-      +'<span class="combined-operator" aria-label="Logical AND">AND</span>'
+      +'<label>Logic <select id="combined-logic" aria-label="Combine predicates with" disabled><option value="and">AND</option><option value="or">OR</option></select></label>'
       +'<label>Service state <select id="combined-state" disabled><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>'
       +'<label>Skip <input id="combined-skip" type="number" min="0" max="10000" value="0"></label>'
       +'<label>Take <input id="combined-take" type="number" min="1" max="100" value="25"></label>'
@@ -59,6 +62,7 @@
       if(!intent)return;
       $('combined-name').value=intent.name;
       $('combined-state').value=intent.state;
+      $('combined-logic').value=intent.logic;
       $('combined-skip').value=String(intent.skip);
       $('combined-take').value=String(intent.take);
     }
@@ -72,8 +76,9 @@
     });
     $('combined-apply').addEventListener('click',()=>{
       try{
-        const intent={version:5,root:'ServiceNode',name:$('combined-name').value,
-          state:$('combined-state').value,logic:'and',orderBy:'Name',
+        const logic=$('combined-logic').value;
+        const intent={version:logic==='and'?5:6,root:'ServiceNode',name:$('combined-name').value,
+          state:$('combined-state').value,logic,orderBy:'Name',
           skip:Number($('combined-skip').value),take:Number($('combined-take').value)};
         const query=format(intent);
         $('combined-error').textContent='';
@@ -88,9 +93,10 @@
       if(!mapped())return;
       $('combined-name').disabled=false;
       $('combined-state').disabled=false;
+      $('combined-logic').disabled=false;
       $('combined-help-me').disabled=false;
       $('combined-apply').disabled=false;
-      $('combined-help').textContent='The Name and State fields are both mapped by GORM. Click Help me for example values.';
+      $('combined-help').textContent='The Name and State fields are mapped by GORM. Select AND or OR, then click Help me for example values.';
       sync();
     });
   }
